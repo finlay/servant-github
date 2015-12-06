@@ -15,9 +15,15 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib
+  exposed-modules:     Network.GitHub
+                     , Network.GitHub.Organisation
   build-depends:       base >= 4.7 && < 5
+                     , aeson
+                     , either
                      , servant
+                     , servant-client
+                     , text
+                     , transformers
   default-language:    Haskell2010
 
 executable servant-github-exe
@@ -25,6 +31,8 @@ executable servant-github-exe
   main-is:             Main.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
+                     , either
+                     , text
                      , servant-github
   default-language:    Haskell2010
 
@@ -33,8 +41,10 @@ test-suite servant-github-test
   hs-source-dirs:      test
   main-is:             Spec.hs
   build-depends:       base
+                     , hspec
+                     , QuickCheck
                      , servant-github
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 
 source-repository head

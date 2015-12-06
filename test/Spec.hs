@@ -1,2 +1,7 @@
+import Test.Hspec
+
 main :: IO ()
-main = putStrLn "Test suite not yet implemented"
+main = hspec $ do
+  describe "organiztions" $ do
+    it "Get a list of organizations" $ do
+        pendingWith "Not implemented"
