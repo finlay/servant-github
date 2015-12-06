@@ -1,9 +1,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Network.GitHub 
-    ( module Network.GitHub.Authentication
-    , module Network.GitHub
+    ( module Network.GitHub
+    , module Network.GitHub.Authentication
+    , module Network.GitHub.Organisation
     )
 where
 
@@ -21,14 +23,32 @@ import Servant.Client
 import Network.GitHub.Authentication
 import Network.GitHub.Organisation
 
-type UserOrgs = OAuth2Token :> "user" :> "orgs" :> Get '[JSON] [Organisation]
+host :: BaseUrl
+host = BaseUrl Https "api.github.com" 443
+
+type UserOrgs = "user" :> "orgs" :> Get '[JSON] [Organisation]
+type OrgTeams = "orgs" :> Capture "org" OrgLogin 
+                       :> "teams" :> Get '[JSON] [Team]
 
 type UserAgent = Text
+type family WithHeaders a 
+type instance WithHeaders a = Header "User-Agent" UserAgent :> OAuth2Token :> a
 
-type API = Header "User-Agent" UserAgent :> UserOrgs
+type family HeaderM a 
+type instance HeaderM a = Maybe UserAgent -> Maybe Token -> a
 
-api :: Proxy API
-api = Proxy
+type GitHub = ReaderT Token (EitherT ServantError IO)
 
-getOrgs :: Maybe UserAgent -> Maybe Token -> EitherT ServantError IO [Organisation]
-getOrgs = client api (BaseUrl Https "api.github.com" 443)
+runGitHub :: Token -> GitHub a -> IO (Either ServantError a)
+runGitHub token comp = runEitherT (runReaderT Token comp)
+
+getOrgs :: HeaderM (EitherT ServantError IO [Organisation])
+getOrgs = client (Proxy :: Proxy (WithHeaders UserOrgs)) host
+
+orgTeams :: HeaderM (OrgLogin -> EitherT ServantError IO [Team])
+orgTeams = client (Proxy :: Proxy (WithHeaders OrgTeams)) host
+
+
+Maybe UserAgent -> EitherT ServantError IO a 
+~>
+ReaderT UserAgent (EitherT ServantError IO) a

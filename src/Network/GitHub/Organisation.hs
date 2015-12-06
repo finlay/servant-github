@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Network.GitHub.Organisation
     ( Organisation(..)
+    , Team(..)
+    , OrgLogin
     )
 where
 
@@ -23,8 +25,9 @@ import Data.Text
 
 -- | Organisation 
 -- We only care about three of the fields: login, id, and description
+type OrgLogin = Text
 data Organisation = Organisation 
-    { orgLogin        :: Text
+    { orgLogin        :: OrgLogin
     , orgId           :: Int
     , orgDescription  :: Maybe Text
     } deriving (Eq, Show)
@@ -35,5 +38,21 @@ instance FromJSON Organisation where
    Organisation <$> o .: "login"
                 <*> o .: "id"
                 <*> o .: "description"
+  parseJSON _ = mzero
+
+-- | Team
+data Team = Team
+    { teamId          :: Integer
+    , teamName        :: Text
+    , teamDescription :: Maybe Text
+    , teamPermission  :: Maybe Text
+    } deriving (Eq, Show)
+
+instance FromJSON Team where
+  parseJSON (Object o) =
+   Team <$> o .: "id"
+        <*> o .: "name"
+        <*> o .: "description"
+        <*> o .: "permission"
   parseJSON _ = mzero
 
