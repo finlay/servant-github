@@ -12,15 +12,9 @@ import Data.Text.IO as T
 
 import Network.GitHub
 
-
-getAuthToken :: IO (Maybe AuthToken)
-getAuthToken = do 
-    mtk <- lookupEnv "GITHUB_TOKEN"
-    return $ fmap (AuthToken . pack) mtk
-
 main :: IO ()
 main = do
-    token <- getAuthToken
+    token <- fmap (AuthToken . pack) <$> lookupEnv "GITHUB_TOKEN"
     when (not $ isJust token) $ do
         T.putStrLn "Please set the GITHUB_TOKEN env variable" 
         exitFailure
