@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Network.GitHub.Organisation
+module Network.GitHub.Types
     ( Organisation(..)
     , Team(..)
     , OrgLogin

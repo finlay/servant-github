@@ -1,8 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
+import System.Exit
 import System.Environment
-import Control.Monad.Trans.Either
+import Control.Monad.IO.Class
 import Control.Monad
 import Data.Monoid
 import Data.Maybe
@@ -11,34 +12,27 @@ import Data.Text.IO as T
 
 import Network.GitHub
 
-ua :: Maybe Text
-ua = Just "servant-github"
 
-getToken :: IO (Maybe Token)
-getToken = do 
+getAuthToken :: IO (Maybe AuthToken)
+getAuthToken = do 
     mtk <- lookupEnv "GITHUB_TOKEN"
-    return $ fmap (Token . pack) mtk
+    return $ fmap (AuthToken . pack) mtk
 
 main :: IO ()
 main = do
-    token <- getToken
+    token <- getAuthToken
     when (not $ isJust token) $ do
         T.putStrLn "Please set the GITHUB_TOKEN env variable" 
-        return ()
-    res <- runEitherT (getOrgs ua token)
-    case res of
-        Left e   -> print e
-        Right os -> mapM_ process os
+        exitFailure
+    errors <- runGitHub token $ do 
+        os <- getOrgs 
+        forM_ os $ \o -> do
+            liftIO $ T.putStrLn (orgLogin o)
+            teams <- orgTeams (orgLogin o)
+            forM_ teams $ \t -> do
+                liftIO $ T.putStrLn $ "  " <> teamName t
 
-process :: Organisation -> IO ()
-process o = do
-    token <- getToken
-    T.putStrLn (orgLogin o)
-    res <- runEitherT (orgTeams ua token (orgLogin o))
-    case res of
-        Left e   -> print e
-        Right ts -> mapM_ printTeam ts
+    case errors of
+        Left e  -> liftIO $ print e
+        Right _ -> exitSuccess
 
-printTeam :: Team -> IO()
-printTeam = T.putStrLn . ("  " <>) . teamName
-    

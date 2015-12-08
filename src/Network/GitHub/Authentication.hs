@@ -9,10 +9,10 @@ import Data.Text
 
 import Servant.API
 
-newtype Token = Token Text deriving (Eq)
-instance IsString Token where
-    fromString s = Token (fromString s)
-instance ToText Token where
-    toText (Token t) = "token " <> t
+newtype AuthToken = AuthToken Text deriving (Eq)
+instance IsString AuthToken where
+    fromString s = AuthToken (fromString s)
+instance ToText AuthToken where
+    toText (AuthToken t) = "token " <> t
 
-type OAuth2Token = Header "Authorization" Token
+type OAuth2Token = Header "Authorization" AuthToken
