@@ -14,6 +14,7 @@ import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Either
 import Data.Proxy
 import Data.Text
+
 import Servant.API
 import Servant.Client
 
@@ -24,6 +25,9 @@ import Network.GitHub.Authentication
 host :: BaseUrl
 host = BaseUrl Https "api.github.com" 443
 
+useragent :: Maybe Text
+useragent = Just "servant-github"
+
 type GitHub = ReaderT (Maybe AuthToken) (EitherT ServantError IO) 
 
 runGitHub :: GitHub a -> Maybe AuthToken -> IO (Either ServantError a)
@@ -32,24 +36,22 @@ runGitHub comp token = runEitherT $ runReaderT comp token
 orgTeams :: OrgLogin -> GitHub [Team]
 orgTeams org = do
     token <- ask
-    lift $ call (Just "servant-github") token org
+    lift $ call useragent token org
   where
-    call :: Maybe Text -> Maybe AuthToken -> OrgLogin -> EitherT ServantError IO [Team]
-    call = client (Proxy :: Proxy (Header "User-Agent" Text :> OrgTeams)) host
-
-
+    layout :: Proxy (Header "User-Agent" Text :> OAuth2Token :> OrgTeams)
+    layout = Proxy
+    call :: Maybe Text -> Maybe AuthToken -> Client OrgTeams
+    call = client layout host
+ 
 
 getOrgs :: GitHub [Organisation]
 getOrgs = do
     token <- ask    
-    lift $ call (Just "servant-github") token
+    lift $ call useragent token
   where 
-    call :: Maybe Text -> Maybe AuthToken -> EitherT ServantError IO [Organisation]
-    call = client (Proxy :: Proxy (Header "User-Agent" Text :> UserOrgs)) host
+    layout :: Proxy (Header "User-Agent" Text :> OAuth2Token :> UserOrgs)
+    layout = Proxy
+    call :: Maybe Text -> Maybe AuthToken -> Client UserOrgs
+    call = client layout host
     
-
-
-
--- | Monad for running the client code
---runGitHub :: 
 

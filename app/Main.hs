@@ -14,11 +14,16 @@ import Network.GitHub
 
 main :: IO ()
 main = do
+
+    -- Get AuthToken from environment variable
     token <- fmap (AuthToken . pack) <$> lookupEnv "GITHUB_TOKEN"
+
+    -- Require the token for this to work
     when (not $ isJust token) $ do
         T.putStrLn "Please set the GITHUB_TOKEN env variable" 
         exitFailure
 
+    -- Run GitHub computation, print errors if there are any
     errors <- runGitHub printOrgsAndTeams token
     case errors of
         Left e  -> liftIO $ print e
