@@ -24,15 +24,17 @@ main = do
     when (not $ isJust token) $ do
         T.putStrLn "Please set the GITHUB_TOKEN env variable" 
         exitFailure
-    errors <- runGitHub token $ do 
-        os <- getOrgs 
-        forM_ os $ \o -> do
-            liftIO $ T.putStrLn (orgLogin o)
-            teams <- orgTeams (orgLogin o)
-            forM_ teams $ \t -> do
-                liftIO $ T.putStrLn $ "  " <> teamName t
 
+    errors <- runGitHub printOrgsAndTeams token
     case errors of
         Left e  -> liftIO $ print e
         Right _ -> exitSuccess
 
+printOrgsAndTeams :: GitHub ()
+printOrgsAndTeams = do
+    os <- getOrgs 
+    forM_ os $ \o -> do
+        liftIO $ T.putStrLn (orgLogin o)
+        teams <- orgTeams (orgLogin o)
+        forM_ teams $ \t -> do
+            liftIO $ T.putStrLn $ "  " <> teamName t

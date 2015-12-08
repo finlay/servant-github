@@ -26,8 +26,8 @@ host = BaseUrl Https "api.github.com" 443
 
 type GitHub = ReaderT (Maybe AuthToken) (EitherT ServantError IO) 
 
-runGitHub :: Maybe AuthToken -> GitHub a -> IO (Either ServantError a)
-runGitHub token comp = runEitherT $ runReaderT comp token
+runGitHub :: GitHub a -> Maybe AuthToken -> IO (Either ServantError a)
+runGitHub comp token = runEitherT $ runReaderT comp token
 
 orgTeams :: OrgLogin -> GitHub [Team]
 orgTeams org = do
