@@ -11,9 +11,7 @@ module Network.GitHub
     )
 where
 
-import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
-import Control.Monad.Trans.Either
 import Data.Proxy
 import Data.Text
 
@@ -26,17 +24,15 @@ import Network.GitHub.Authentication
 import Network.GitHub.Client
 
 orgTeams :: OrgLogin -> GitHub [Team]
-orgTeams org = do
-    token <- ask
-    lift $ call useragent token org
+orgTeams = ReaderT . flip call  
   where
     layout :: Proxy (Header "User-Agent" Text :> OAuth2Token :> OrgTeams)
     layout = Proxy
-    call :: Maybe Text -> Maybe AuthToken -> Client OrgTeams
-    call = client layout host
+    call :: Maybe AuthToken -> Client OrgTeams
+    call = client layout host (Just useragent)
  
 getOrgs :: GitHub [Organisation]
-getOrgs = github (Just "servant-github") (Proxy :: Proxy UserOrgs)
+getOrgs = github "servant-github" (Proxy :: Proxy UserOrgs)
 
 --orgTeams' :: OrgLogin -> GitHub [Team]
 --orgTeams' = github (Proxy :: Proxy OrgTeams)
