@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
@@ -23,53 +24,77 @@ import Network.GitHub.Authentication
 host :: BaseUrl
 host = BaseUrl Https "api.github.com" 443
 
-useragent :: Maybe Text
+type UserAgent = Maybe Text
+useragent :: UserAgent
 useragent = Just "servant-github"
 
-type GitHub = ReaderT (Maybe AuthToken) (EitherT ServantError IO) 
+addHeaders :: HasClient layout 
+           => BaseUrl -> Proxy layout -> Maybe Text -> Maybe AuthToken 
+           -> Client layout
+addHeaders host (Proxy :: Proxy layout) =
+    let layout :: Proxy (Header "User-Agent" Text :> OAuth2Token :> layout)
+        layout = Proxy
+    in  client layout host
 
+type GitHub = ReaderT (Maybe AuthToken) (EitherT ServantError IO) 
 runGitHub :: GitHub a -> Maybe AuthToken -> IO (Either ServantError a)
 runGitHub comp = runEitherT . runReaderT comp 
 
+single :: (Monad m, HasClient layout, Client layout ~ m b) =>
+     UserAgent -> Proxy layout -> ReaderT (Maybe AuthToken) m b
+single ua px = do
+    token <- ask
+    lift $ addHeaders host px ua token
+
+witharg :: (Monad m, HasClient layout, Client layout ~ (a -> m b)) =>
+     UserAgent -> Data.Proxy.Proxy layout -> a -> ReaderT (Maybe AuthToken) m b
+witharg ua px arg = do
+    token <- ask
+    lift $ addHeaders host px ua token arg
+    
 class HasGitHub layout where
     type GH layout :: *
-    github :: Proxy layout -> GH layout 
+    github :: UserAgent -> Proxy layout -> GH layout 
 
 instance (HasGitHub a, HasGitHub b) => HasGitHub (a :<|> b) where
   type GH (a :<|> b) = GH a :<|> GH b
-  github Proxy = github (Proxy :: Proxy a) :<|>
-                 github (Proxy :: Proxy b) 
+  github ua Proxy = github ua (Proxy :: Proxy a) :<|>
+                    github ua (Proxy :: Proxy b) 
 
---instance (KnownSymbol capture, ToText a, HasGitHub sublayout)
---      => HasGitHub (Capture capture a :> sublayout) where
---  type GH (Capture capture a :> sublayout) = a -> GH sublayout
---  github Proxy val = github (Proxy :: Proxy sublayout)
+instance ( KnownSymbol capture, ToText a, HasGitHub sublayout )
+      => HasGitHub (Capture capture a :> sublayout) where
+    type GH (Capture capture a :> sublayout) = a -> GH sublayout
+    github ua px val = witharg ua px val
 
-instance (HasClient layout, layout ~ (Delete cts' a))
-  => HasGitHub (Delete cts' a) where
-  type GH (Delete cts' a) = GitHub a
-  github Proxy = do
-      token <- ask
-      lift $ call useragent token
-    where
-      layout :: Proxy (Header "User-Agent" Text :> OAuth2Token :> layout)
-      layout = Proxy
-      call :: Maybe Text -> Maybe AuthToken -> Client layout
-      call = client layout host
+instance ( HasClient layout, layout ~ (Get cts a)
+         , Client layout ~ EitherT ServantError IO a)
+    => HasGitHub (Get cts a) where
+    type GH (Get cts a) = GitHub a
+    github ua px = single ua px
 
-instance ( HasClient layout 
-         , layout ~ (Get cts result)
-         , Client layout ~ EitherT ServantError IO result)
-  => HasGitHub (Get cts result) where
-  type GH (Get cts result) = GitHub result
-  github Proxy = do
-      token <- ask
-      lift $ call useragent token
-    where
-      layout :: Proxy (Header "User-Agent" Text :> OAuth2Token :> layout)
-      layout = Proxy
-      call :: Maybe Text -> Maybe AuthToken -> Client layout
-      call = client layout host
+instance ( HasClient layout, layout ~ (Post cts a)
+         , Client layout ~ EitherT ServantError IO a)
+    => HasGitHub (Post cts a) where
+    type GH (Post cts a) = GitHub a
+    github ua px = single ua px
+
+instance ( HasClient layout, layout ~ (Put cts a)
+         , Client layout ~ EitherT ServantError IO a)
+    => HasGitHub (Put cts a) where
+    type GH (Put cts a) = GitHub a
+    github ua px = single ua px
+
+instance ( HasClient layout, layout ~ (Delete cts a)
+         , Client layout ~ EitherT ServantError IO a)
+    => HasGitHub (Delete cts a) where
+    type GH (Delete cts a) = GitHub a
+    github ua px = single ua px
+
+instance ( HasClient layout, layout ~ (Patch cts a)
+         , Client layout ~ EitherT ServantError IO a)
+    => HasGitHub (Patch cts a) where
+    type GH (Patch cts a) = GitHub a
+    github ua px = single ua px
 
 
 --instance (KnownSymbol sym, ToText a, HasGitHub sublayout)
@@ -77,18 +102,6 @@ instance ( HasClient layout
 --  type GH (Header sym a :> sublayout) =
 --    Maybe a -> GH sublayout
 --  github Proxy  mval =
---
---instance HasGitHub (Post (ct ': cts) a) where
---  type GH (Post (ct ': cts) a) = GitHub a
---  github Proxy  =
---
---instance HasGitHub (Put (ct ': cts) a) where
---  type GH (Put (ct ': cts) a) = GitHub a
---  github Proxy  =
---
---instance HasGitHub (Patch (ct ': cts) a) where
---  type GH (Patch (ct ': cts) a) = GitHub a
---  github Proxy  =
 --
 --instance (KnownSymbol sym, ToText a, HasGitHub sublayout)
 --      => HasGitHub (QueryParam sym a :> sublayout) where
@@ -134,5 +147,5 @@ instance ( HasClient layout
 --
 instance (KnownSymbol path, HasGitHub sublayout) => HasGitHub (path :> sublayout) where
   type GH (path :> sublayout) = GH sublayout
-  github Proxy = github (Proxy :: Proxy sublayout)
+  github ua Proxy = github ua (Proxy :: Proxy sublayout)
 

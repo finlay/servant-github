@@ -36,7 +36,7 @@ orgTeams org = do
     call = client layout host
  
 getOrgs :: GitHub [Organisation]
-getOrgs = github (Proxy :: Proxy UserOrgs)
+getOrgs = github (Just "servant-github") (Proxy :: Proxy UserOrgs)
 
 --orgTeams' :: OrgLogin -> GitHub [Team]
 --orgTeams' = github (Proxy :: Proxy OrgTeams)
