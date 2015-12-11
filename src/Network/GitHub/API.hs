@@ -13,4 +13,3 @@ type OrgTeams = "orgs" :> Capture "org" OrgLogin :> "teams" :> Get '[JSON] [Team
 
 
 
-
