@@ -6,7 +6,6 @@ module Network.GitHub
     ( module Network.GitHub
     , module Network.GitHub.API
     , module Network.GitHub.Types
-    , module Network.GitHub.Authentication
     , module Network.GitHub.Client
     )
 where
@@ -15,7 +14,6 @@ import Data.Proxy
 
 import Network.GitHub.API
 import Network.GitHub.Types
-import Network.GitHub.Authentication
 import Network.GitHub.Client
 
 useragent :: UserAgent

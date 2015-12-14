@@ -7,6 +7,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
 module Network.GitHub.Client
+    ( github
+    , GitHub
+    , runGitHub
+    , AuthToken
+    , UserAgent
+    )
 where
 
 import Control.Monad.Trans.Class
@@ -15,7 +21,8 @@ import Control.Monad.Trans.State
 import Control.Monad.Trans.Either
 import Data.Proxy
 import GHC.TypeLits
-import Data.Text
+import Data.String
+import Data.Text as T
 
 import Servant.API
 import Servant.Client
@@ -23,12 +30,16 @@ import Servant.Client
 import Network.HTTP.Link.Types
 import Network.HTTP.Link.Parser (parseLinkHeaderBS)
 
-import Network.GitHub.Authentication
+newtype AuthToken = AuthToken Text deriving (Eq)
+instance IsString AuthToken where
+    fromString s = AuthToken (fromString s)
+instance ToText AuthToken where
+    toText (AuthToken t) = T.concat ["token ",  t]
+type UserAgent = Text
 
 host :: BaseUrl
 host = BaseUrl Https "api.github.com" 443
 
-type UserAgent = Text
 type GitHub = ReaderT (Maybe AuthToken) (StateT Pagination (EitherT ServantError IO))
 
 runGitHub :: GitHub a -> Maybe AuthToken -> IO (Either ServantError a)
@@ -43,7 +54,9 @@ type family AddHeaders a :: * where
     AddHeaders (first :> last)
         = first :> AddHeaders last
     AddHeaders last 
-        = Header "User-Agent" Text :> OAuth2Token :> ReadHeaders last
+        =  Header "User-Agent" Text 
+        :> Header "Authorization" AuthToken 
+        :> ReadHeaders last
 type family ReadHeaders a :: * where
     ReadHeaders (Get cts [res])    
         = QueryParam "page" Int :> QueryParam "per_page" Int 

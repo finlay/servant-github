@@ -7,6 +7,7 @@ import Control.Monad.IO.Class
 import Control.Monad
 import Data.Monoid
 import Data.Maybe
+import Data.String
 import Data.Text as T
 import Data.Text.IO as T
 
@@ -16,7 +17,7 @@ main :: IO ()
 main = do
 
     -- Get AuthToken from environment variable
-    token <- fmap (AuthToken . pack) <$> lookupEnv "GITHUB_TOKEN"
+    token <- fmap fromString <$> lookupEnv "GITHUB_TOKEN"
 
     -- Require the token for this to work
     when (not $ isJust token) $ do
@@ -34,13 +35,7 @@ printOrgsAndTeams = do
     os <- userOrganisations
     forM_ os $ \o -> do
         liftIO $ T.putStrLn (orgLogin o)
-        teams <- organisationTeams (orgLogin o)
-        forM_ teams $ \t -> do
-            liftIO $ T.putStrLn $ "  " <> teamName t
-            members <- teamMembers (teamId t)
-            liftIO $ T.putStrLn $ "    " <> T.intercalate ", " [ memberLogin m | m <- members]
-            repos <- teamRepositories (teamId t)
-            liftIO $ T.putStrLn $ "    " <> T.intercalate ", " [ repositoryName r | r <- repos]
+        printTeams (orgLogin o)
 
 printTeams :: OrgLogin -> GitHub ()
 printTeams ol = do

@@ -19,7 +19,6 @@ library
                      , Network.GitHub.API
                      , Network.GitHub.Client
                      , Network.GitHub.Types
-                     , Network.GitHub.Authentication
   build-depends:       base >= 4.7 && < 5
                      , aeson
                      , either
