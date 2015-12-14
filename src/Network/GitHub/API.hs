@@ -7,9 +7,9 @@ import Servant.API
 
 import Network.GitHub.Types
 
-type UserOrgs = "user" :> "orgs" :> Get '[JSON] [Organisation]
-type OrgTeams = "orgs" :> Capture "org" OrgLogin :> "teams" :> Get '[JSON] [Team]
-
-
+type UserOrganisations = "user" :> "orgs" :> Get '[JSON] [Organisation]
+type OrganisationTeams = "orgs" :> Capture "org" OrgLogin :> "teams" :> Get '[JSON] [Team]
+type TeamMembers = "teams" :> Capture "id" TeamId :> "members" :> Get '[JSON] [Member]
+type TeamRepositories = "teams" :> Capture "id" TeamId :> "repos" :> Get '[JSON] [Repository]
 
 

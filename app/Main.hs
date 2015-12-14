@@ -7,7 +7,7 @@ import Control.Monad.IO.Class
 import Control.Monad
 import Data.Monoid
 import Data.Maybe
-import Data.Text
+import Data.Text as T
 import Data.Text.IO as T
 
 import Network.GitHub
@@ -31,9 +31,13 @@ main = do
 
 printOrgsAndTeams :: GitHub ()
 printOrgsAndTeams = do
-    os <- getOrgs 
+    os <- userOrganisations
     forM_ os $ \o -> do
         liftIO $ T.putStrLn (orgLogin o)
-        teams <- orgTeams (orgLogin o)
+        teams <- organisationTeams (orgLogin o)
         forM_ teams $ \t -> do
             liftIO $ T.putStrLn $ "  " <> teamName t
+            members <- teamMembers (teamId t)
+            liftIO $ T.putStrLn $ "    " <> T.intercalate ", " [ memberLogin m | m <- members]
+            repos <- teamRepositories (teamId t)
+            liftIO $ T.putStrLn $ "    " <> T.intercalate ", " [ repositoryName r | r <- repos]

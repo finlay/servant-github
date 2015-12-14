@@ -1,27 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Network.GitHub.Types
     ( Organisation(..)
-    , Team(..)
     , OrgLogin
+    , Team(..)
+    , TeamId
+    , Member(..)
+    , MemberId
+    , Repository(..)
+    , RepositoryName
     )
 where
 
 import Control.Monad
 import Data.Aeson
 import Data.Text
-
-{--
-  GET /user/orgs
-  [ 
-   {
-    "login": "github",
-    "id": 1,
-    "url": "https://api.github.com/orgs/github",
-    "avatar_url": "https://github.com/images/error/octocat_happy.gif",
-    "description": "A great organization"
-   } 
-  ]
---}
 
 -- | Organisation 
 -- We only care about three of the fields: login, id, and description
@@ -41,8 +33,9 @@ instance FromJSON Organisation where
   parseJSON _ = mzero
 
 -- | Team
+type TeamId = Integer
 data Team = Team
-    { teamId          :: Integer
+    { teamId          :: TeamId
     , teamName        :: Text
     , teamDescription :: Maybe Text
     , teamPermission  :: Maybe Text
@@ -54,5 +47,33 @@ instance FromJSON Team where
         <*> o .: "name"
         <*> o .: "description"
         <*> o .: "permission"
+  parseJSON _ = mzero
+
+-- | Member
+type MemberId = Integer
+data Member = Member
+    { memberId        :: MemberId
+    , memberLogin     :: Text
+    } deriving (Eq, Show)
+
+instance FromJSON Member where
+  parseJSON (Object o) =
+   Member <$> o .: "id"
+          <*> o .: "login"
+  parseJSON _ = mzero
+
+-- | Repository
+type RepositoryName = Text
+data Repository = Repository
+    { repositoryName  :: RepositoryName
+    , repositoryDescription :: Maybe Text
+    , repositoryPrivate :: Bool
+    } deriving (Eq, Show)
+
+instance FromJSON Repository where
+  parseJSON (Object o) =
+   Repository <$> o .: "name"
+              <*> o .: "description"
+              <*> o .: "private"
   parseJSON _ = mzero
 

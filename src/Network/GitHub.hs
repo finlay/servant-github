@@ -18,8 +18,14 @@ import Network.GitHub.Types
 import Network.GitHub.Authentication
 import Network.GitHub.Client
 
-getOrgs :: GitHub [Organisation]
-getOrgs = github "servant-github" (Proxy :: Proxy UserOrgs)
+userOrganisations :: GitHub [Organisation]
+userOrganisations = github "servant-github" (Proxy :: Proxy UserOrganisations)
 
-orgTeams :: OrgLogin -> GitHub [Team]
-orgTeams = github "servant-github" (Proxy :: Proxy OrgTeams)
+organisationTeams :: OrgLogin -> GitHub [Team]
+organisationTeams = github "servant-github" (Proxy :: Proxy OrganisationTeams)
+
+teamMembers :: TeamId -> GitHub [Member]
+teamMembers = github "servant-github" (Proxy :: Proxy TeamMembers)
+
+teamRepositories :: TeamId -> GitHub [Repository]
+teamRepositories = github "servant-github" (Proxy :: Proxy TeamRepositories)
