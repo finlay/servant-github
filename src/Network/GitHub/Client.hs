@@ -12,9 +12,15 @@ module Network.GitHub.Client
     , runGitHub
     , AuthToken
     , UserAgent
+    , resetPagination
+    , recurseOff
+    , recurseOn
+    , pageSize
+    , getLinks
     )
 where
 
+import Control.Monad (when)
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.State
@@ -92,11 +98,8 @@ class HasGitHub a where
 instance HasGitHub (Pres a) where
     embedGitHub ua comp = do
         token <- ask
-        lift $ do
-            rec <- gets recurse
-            if rec 
-                then modify $ \pg -> pg { page = 1, links = Nothing }
-                else return ()
+        r <- lift $ gets recurse
+        when r resetPagination
                         
         let accumPages acc = do
              p  <- gets page
@@ -150,11 +153,21 @@ data Pagination = Pagination { perPage :: Int
                              , recurse :: Bool 
                              } deriving Show
 defPagination :: Pagination
-defPagination = Pagination 30 1 Nothing True
+defPagination = Pagination 100 1 Nothing True
 
 hasNextLink :: Pagination -> Bool
 hasNextLink pg = maybe False hnl (links pg)
     where hnl = Prelude.any (\ln -> (Rel, "next") `elem` linkParams ln)
     
+resetPagination :: GitHub ()
+resetPagination = lift $ modify $ \pg -> pg { page = 1, links = Nothing }
 
+recurseOff, recurseOn :: GitHub ()
+recurseOff =  lift $ modify $ \pg -> pg { recurse = False } 
+recurseOn  =  lift $ modify $ \pg -> pg { recurse = True } 
 
+pageSize :: Int -> GitHub ()
+pageSize ps = lift $ modify $ \pg -> pg { perPage = ps }
+
+getLinks :: GitHub (Maybe [Link])
+getLinks = lift $ gets links
