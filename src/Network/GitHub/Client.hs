@@ -6,12 +6,27 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
+-- |
+-- Module      : Network.GitHub.Client
+-- Copyright   : (c) Finlay Thompson, 2015
+-- License     : BSD3
+-- Maintainer  : finlay.thompson@gmail.com
+-- Stability   : experimental
+ 
 module Network.GitHub.Client
     ( github
+    , AuthToken
     , GitHub
     , runGitHub
-    , AuthToken
-    , UserAgent
+    , GitHubState(..)
+    , HasGitHub
+    , embedGitHub
+    , EmbedGitHub
+    , AddHeaders
+    , ReadHeaders
+    , Single
+    , Paginated
+    , setUserAgent
     , resetPagination
     , recurseOff
     , recurseOn
@@ -36,24 +51,27 @@ import Servant.Client
 import Network.HTTP.Link.Types
 import Network.HTTP.Link.Parser (parseLinkHeaderBS)
 
+-- | Token used to authorize access to the GitHub API.
+-- see <https://developer.github.com/v3/oauth/>
 newtype AuthToken = AuthToken Text deriving (Eq)
 instance IsString AuthToken where
     fromString s = AuthToken (fromString s)
 instance ToText AuthToken where
     toText (AuthToken t) = T.concat ["token ",  t]
-type UserAgent = Text
 
 host :: BaseUrl
 host = BaseUrl Https "api.github.com" 443
 
-type GitHub = ReaderT (Maybe AuthToken) (StateT Pagination (EitherT ServantError IO))
+-- | The 'GitHub' monad provides execution context
+type GitHub = ReaderT (Maybe AuthToken) (StateT GitHubState (EitherT ServantError IO))
 
+-- | You need to provide a 'Maybe AuthToken' to lift a 'GitHub' computation
+-- into the 'IO' monad. 
 runGitHub :: GitHub a -> Maybe AuthToken -> IO (Either ServantError a)
-runGitHub comp token = runEitherT $ evalStateT (runReaderT comp token) defPagination
+runGitHub comp token = runEitherT $ evalStateT (runReaderT comp token) defGitHubState
 
--- | Issues supported in monad automatically
--- User-Agent, Auth Token, Pagination Headers
-
+-- | Closed type family that adds standard headers to the incoming 
+-- servant API type. The extra headers are put after any arguments types.
 type family AddHeaders a :: * where
     AddHeaders ((sym :: Symbol) :> last) 
         = (sym :: Symbol) :> AddHeaders last
@@ -63,6 +81,8 @@ type family AddHeaders a :: * where
         =  Header "User-Agent" Text 
         :> Header "Authorization" AuthToken 
         :> ReadHeaders last
+-- | Closed type family that adds headers necessary for pagination. In particular,
+-- it captures the "Link" header from the response.
 type family ReadHeaders a :: * where
     ReadHeaders (Get cts [res])    
         = QueryParam "page" Int :> QueryParam "per_page" Int 
@@ -81,27 +101,33 @@ type family ReadHeaders a :: * where
           :> Patch cts (Headers '[Header "Link" Text] [res])
     ReadHeaders otherwise = otherwise
 
-type Pre a = Maybe UserAgent -> Maybe AuthToken 
+-- | Client function that returns a single result
+type Single a = Maybe Text -> Maybe AuthToken 
             -> EitherT ServantError IO a
 
-type Pres a = Maybe UserAgent -> Maybe AuthToken 
-            -> Maybe Int -> Maybe Int
-            -> EitherT ServantError IO (Headers '[Header "Link" Text] [a])
+-- | Client function that returns a list of results, and is therefore paginated
+type Paginated a = Maybe Text -> Maybe AuthToken 
+                -> Maybe Int -> Maybe Int
+                -> EitherT ServantError IO (Headers '[Header "Link" Text] [a])
 
-type family GHF a :: * where
-    GHF (Pre a)  = GitHub a
-    GHF (Pres a) = GitHub [a]
-    GHF (a -> b) = a -> GHF b
+-- | Closed type family for recursively defining the GitHub client funciton types
+type family EmbedGitHub a :: * where
+    EmbedGitHub (Single a)  = GitHub a
+    EmbedGitHub (Paginated a) = GitHub [a]
+    EmbedGitHub (a -> b) = a -> EmbedGitHub b
 
+-- | This class defines how the client code is actually called.
 class HasGitHub a where
-    embedGitHub :: UserAgent -> a -> GHF a
-instance HasGitHub (Pres a) where
-    embedGitHub ua comp = do
+    embedGitHub :: a -> EmbedGitHub a
+-- | Instance for the case where we have paginated results
+instance HasGitHub (Paginated a) where
+    embedGitHub comp = do
         token <- ask
         r <- lift $ gets recurse
         when r resetPagination
                         
         let accumPages acc = do
+             ua <- gets useragent
              p  <- gets page
              pp <- gets perPage
              hres <- lift $ comp (Just ua) token (Just p) (Just pp)
@@ -118,56 +144,77 @@ instance HasGitHub (Pres a) where
                  else return acc' 
         lift $ accumPages []
 
-instance HasGitHub (Pre a) where
-    embedGitHub ua comp = do
+-- | Instance for the case where we have single result
+instance HasGitHub (Single a) where
+    embedGitHub comp = do
         token <- ask
         lift $ do 
+            ua <- gets useragent
             lift $ comp (Just ua) token
                     
 -- This instance is a bit too literal. Should be possible to do it reursively
-instance HasGitHub (a -> Pre b) where
-    embedGitHub ua comp arg = embedGitHub ua (comp arg)
-instance HasGitHub (a -> b -> Pre c) where
-    embedGitHub ua comp arg = embedGitHub ua (comp arg)
-instance HasGitHub (a -> b -> c -> Pre d) where
-    embedGitHub ua comp arg = embedGitHub ua (comp arg)
-instance HasGitHub (a -> Pres b) where
-    embedGitHub ua comp arg = embedGitHub ua (comp arg)
-instance HasGitHub (a -> b -> Pres c) where
-    embedGitHub ua comp arg = embedGitHub ua (comp arg)
-instance HasGitHub (a -> b -> c -> Pres d) where
-    embedGitHub ua comp arg = embedGitHub ua (comp arg)
+instance HasGitHub (a -> Single b) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> Single c) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> Single d) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> Paginated b) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> Paginated c) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> Paginated d) where
+    embedGitHub comp arg = embedGitHub (comp arg)
 
+-- | Wrapper around the servant 'client' function, that takes care of the 
+-- extra headers that required for the 'GitHub' monad.
 github :: (HasClient (AddHeaders api), HasGitHub (Client (AddHeaders api))) 
-       => UserAgent -> Proxy api -> GHF (Client (AddHeaders api))
-github ua px = embedGitHub ua (clientWithHeaders px)
+       => Proxy api -> EmbedGitHub (Client (AddHeaders api))
+github px = embedGitHub (clientWithHeaders px)
 
 clientWithHeaders :: HasClient (AddHeaders api) => Proxy api -> Client (AddHeaders api)
 clientWithHeaders (Proxy :: Proxy api) = client (Proxy :: Proxy (AddHeaders api)) host 
 
 
--- | Pagination options that can be set, including the page number, and the per_page
-data Pagination = Pagination { perPage :: Int
-                             , page    :: Int
-                             , links   :: Maybe [Link]
-                             , recurse :: Bool 
-                             } deriving Show
-defPagination :: Pagination
-defPagination = Pagination 100 1 Nothing True
+-- | GitHubState options that control which headers are provided to the API
+-- and stores the 'Link' header result
+data GitHubState 
+    = GitHubState 
+    { perPage    :: Int   -- ^ The number of records returned per page
+    , page       :: Int   -- ^ The page number returned
+    , links      :: Maybe [Link] -- ^ Contains the returned 'Link' header, if available.
+    , recurse    :: Bool  -- ^ Flag to set the recursive mode on
+    , useragent  :: Text -- ^ Text to send as "User-agent"
+    } deriving Show
+defGitHubState :: GitHubState
+defGitHubState = GitHubState 100 1 Nothing True "servant-github"
 
-hasNextLink :: Pagination -> Bool
-hasNextLink pg = maybe False hnl (links pg)
+-- | Overide default value for User-agent header.
+-- Note, GitHub requires that a User-agent header be set.
+setUserAgent :: Text -> GitHub ()
+setUserAgent ua = lift $ modify $ \ghs -> ghs { useragent = ua }
+
+hasNextLink :: GitHubState -> Bool
+hasNextLink ghs = maybe False hnl (links ghs)
     where hnl = Prelude.any (\ln -> (Rel, "next") `elem` linkParams ln)
     
+-- | Set next page back to 1, and remove the links
 resetPagination :: GitHub ()
-resetPagination = lift $ modify $ \pg -> pg { page = 1, links = Nothing }
+resetPagination = lift $ modify $ \ghs -> ghs { page = 1, links = Nothing }
 
+-- | Turn automatic recusive behaviour on and off.
+--
+-- If recursive is on, paginated results will be automatically
+-- followed and concated together.
 recurseOff, recurseOn :: GitHub ()
-recurseOff =  lift $ modify $ \pg -> pg { recurse = False } 
-recurseOn  =  lift $ modify $ \pg -> pg { recurse = True } 
+recurseOff =  lift $ modify $ \ghs -> ghs { recurse = False } 
+recurseOn  =  lift $ modify $ \ghs -> ghs { recurse = True } 
 
+-- | The default number of records per page is set to 100. Smaller pages can be
+-- set, but not bigger than 100.
 pageSize :: Int -> GitHub ()
-pageSize ps = lift $ modify $ \pg -> pg { perPage = ps }
+pageSize ps = lift $ modify $ \ghs -> ghs { perPage = ps }
 
+-- | Return the 'Link' header. This is only set when there are futher pages.
 getLinks :: GitHub (Maybe [Link])
 getLinks = lift $ gets links

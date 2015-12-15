@@ -1,4 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
+-- |
+-- Module      : Network.GitHub.Types
+-- Copyright   : (c) Finlay Thompson, 2015
+-- License     : BSD3
+-- Maintainer  : finlay.thompson@gmail.com
+-- Stability   : experimental
+--
+-- Most of the types only parse part of the data availble in the return
+-- values from the GitHub API. These will be added to as required.
+ 
 module Network.GitHub.Types
     ( Organisation(..)
     , OrgLogin
@@ -16,13 +26,13 @@ import Data.Aeson
 import Data.Text
 
 -- | Organisation 
--- We only care about three of the fields: login, id, and description
-type OrgLogin = Text
 data Organisation = Organisation 
     { orgLogin        :: OrgLogin
     , orgId           :: Int
     , orgDescription  :: Maybe Text
     } deriving (Eq, Show)
+-- | Primary identifier for an organisation is the login
+type OrgLogin = Text
 
 
 instance FromJSON Organisation where
@@ -33,13 +43,14 @@ instance FromJSON Organisation where
   parseJSON _ = mzero
 
 -- | Team
-type TeamId = Integer
 data Team = Team
     { teamId          :: TeamId
     , teamName        :: Text
     , teamDescription :: Maybe Text
     , teamPermission  :: Maybe Text
     } deriving (Eq, Show)
+-- | Identifier for a team id
+type TeamId = Integer
 
 instance FromJSON Team where
   parseJSON (Object o) =
@@ -50,11 +61,12 @@ instance FromJSON Team where
   parseJSON _ = mzero
 
 -- | Member
-type MemberId = Integer
 data Member = Member
     { memberId        :: MemberId
     , memberLogin     :: Text
     } deriving (Eq, Show)
+-- | members are identified by ids
+type MemberId = Integer
 
 instance FromJSON Member where
   parseJSON (Object o) =
@@ -63,12 +75,13 @@ instance FromJSON Member where
   parseJSON _ = mzero
 
 -- | Repository
-type RepositoryName = Text
 data Repository = Repository
     { repositoryName  :: RepositoryName
     , repositoryDescription :: Maybe Text
     , repositoryPrivate :: Bool
     } deriving (Eq, Show)
+-- | repositories are identified by their name
+type RepositoryName = Text
 
 instance FromJSON Repository where
   parseJSON (Object o) =
