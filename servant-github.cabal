@@ -1,5 +1,5 @@
 name:                servant-github
-version:             0.1.0.0
+version:             0.1.0.1
 synopsis:            Bindings to GitHub API using servant.
 description:         This package provides a servant-client based client
                      for accessing the <https://developer.github.com/v3/ GitHub API v3>.
