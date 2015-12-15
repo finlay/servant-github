@@ -1,12 +1,14 @@
 ## GitHub bindings with servant
 
-This library defines servant types that map to (parts of) the GitHub API v3
-(GH-API). It should be useful for anyone wanting to use the GH-API in their
+This library defines [servant](http://hackage.haskell.org/package/servant)
+types that map to (parts of) the GitHub API v3 (GH-API). It should be useful
+for anyone wanting to use the GH-API in their
 application. It does not aim to be complete, but should be easily extendible.
 
-The purpose of writing this package is two fold: firstly, to get some experience
-with writing servant-client code, and secondly, to create a more extensible
-github client library. 
+There are two purposes for writing this package: firstly, to get some experience
+with writing
+[servant-client](http://hackage.haskell.org/package/servant-client) code, and
+secondly, to create a more extensible github client library. 
 
 ### Related projects
 
