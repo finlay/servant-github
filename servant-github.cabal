@@ -10,17 +10,17 @@ description:         This package provides a servant-client based client
                      support when the resulting value is a list.
                      .
                      >
-                     >  import System.Environment
-                     >  import Network.Github
-                     >  
-                     >  main = do
-                     >      token <- fmap fromString <$> lookupEnv "GITHUB_TOKEN"
-                     >      result <- runGitHub userOrganisations token
-                     >      case result of
-                     >          Left e  ->  print e
-                     >          Right orgs -> mapM_ print orgs
-                     >
-                            
+                     > import System.Environment
+                     > import Data.String
+                     > import Network.GitHub
+                     > 
+                     > main = do
+                     >    token <- fmap fromString <$> lookupEnv "GITHUB_TOKEN"
+                     >    result <- runGitHub userOrganisations token
+                     >    case result of
+                     >        Left e  ->  print e
+                     >        Right orgs -> mapM_ print orgs
+
 homepage:            http://github.com/finlay/servant-github#readme
 license:             BSD3
 license-file:        LICENSE
