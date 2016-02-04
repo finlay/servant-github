@@ -18,6 +18,7 @@ module Network.GitHub.Types
     , MemberId
     , Repository(..)
     , RepositoryName
+    , User(..)
     )
 where
 
@@ -88,5 +89,23 @@ instance FromJSON Repository where
    Repository <$> o .: "name"
               <*> o .: "description"
               <*> o .: "private"
+  parseJSON _ = mzero
+
+-- | Organisation 
+data User = User
+    { userLogin       :: Text
+    , userId          :: Int
+    , userName        :: Maybe Text
+    , userCompany     :: Maybe Text
+    , userEmail       :: Maybe Text
+    } deriving (Eq, Show)
+
+instance FromJSON User where
+  parseJSON (Object o) =
+   User <$> o .: "login"
+        <*> o .: "id"
+        <*> o .: "name"
+        <*> o .: "company"
+        <*> o .: "email"
   parseJSON _ = mzero
 

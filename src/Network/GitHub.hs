@@ -79,6 +79,10 @@ teamMembers = github (Proxy :: Proxy TeamMembers)
 teamRepositories :: TeamId -> GitHub [Repository]
 teamRepositories = github (Proxy :: Proxy TeamRepositories)
 
+-- | Get the current user for the authorised user
+user :: GitHub User
+user = github (Proxy :: Proxy GetUser)
+
 -- $github
 --
 -- Use the 'runGitHub' function to execute the 'GitHub' client function.

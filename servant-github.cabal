@@ -47,6 +47,16 @@ library
                      , transformers
   default-language:    Haskell2010
 
+executable test
+  main-is:             Main.hs
+  build-depends:       base
+                     , servant-github
+                     , text
+                     , transformers
+  hs-source-dirs:      app
+  ghc-options: -Wall -fno-warn-name-shadowing -O3 -threaded
+  default-language:    Haskell2010 
+
 test-suite servant-github-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
