@@ -29,6 +29,7 @@ module Network.GitHub
     , getTeam
     , teamMembers
     , teamRepositories
+    , user
     -- * GitHub monad
     -- $github
     , GitHub
