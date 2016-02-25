@@ -109,3 +109,12 @@ instance FromJSON User where
         <*> o .: "email"
   parseJSON _ = mzero
 
+instance ToJSON User where
+  toJSON u = 
+    object [ "login"   .= userLogin u
+           , "id"      .= userId u
+           , "name"    .= userName u
+           , "company" .= userCompany u
+           , "email"   .= userEmail u
+           ]
+
