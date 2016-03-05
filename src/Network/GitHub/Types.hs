@@ -80,15 +80,27 @@ data Repository = Repository
     { repositoryName  :: RepositoryName
     , repositoryDescription :: Maybe Text
     , repositoryPrivate :: Bool
+    , repositoryPermissions :: Maybe Permission
     } deriving (Eq, Show)
 -- | repositories are identified by their name
 type RepositoryName = Text
 
+data Permission = Push | Pull | Admin deriving (Eq, Show)
+instance FromJSON Permission where
+  parseJSON (Object o) = do 
+    admin <- o .: "admin"
+    push  <- o .: "push"
+    return $ if admin then Admin
+              else if push then Push
+              else Pull
+  parseJSON _ = mzero
+
 instance FromJSON Repository where
   parseJSON (Object o) =
-   Repository <$> o .: "name"
+   Repository <$> o .: "full_name"
               <*> o .: "description"
               <*> o .: "private"
+              <*> o .:? "permissions"
   parseJSON _ = mzero
 
 -- | Organisation 

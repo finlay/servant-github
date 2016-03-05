@@ -31,3 +31,6 @@ type GetTeam = "teams" :> Capture "id" TeamId :> Get '[JSON] Team
 
 -- | <https://developer.github.com/v3/users/#get-the-authenticated-user>
 type GetUser = "user" :> Get '[JSON] User
+
+-- | <https://developer.github.com/v3/repos/#list-your-repositories>
+type UserRepositories = "user" :> "repos" :> Get '[JSON] [Repository]
