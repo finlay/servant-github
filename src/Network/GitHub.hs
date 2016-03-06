@@ -86,7 +86,7 @@ user :: GitHub User
 user = github (Proxy :: Proxy GetUser)
 --
 -- | Get repositories for the authorised user
-userRepositories :: GitHub [Repository]
+userRepositories :: Maybe String -> GitHub [Repository]
 userRepositories = github (Proxy :: Proxy UserRepositories)
 
 -- $github

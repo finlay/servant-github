@@ -85,7 +85,11 @@ data Repository = Repository
 -- | repositories are identified by their name
 type RepositoryName = Text
 
-data Permission = Push | Pull | Admin deriving (Eq, Show)
+data Permission = Push | Pull | Admin deriving (Eq)
+instance Show Permission where
+    show Push  = "push"
+    show Pull  = "pull"
+    show Admin = "admin"
 instance FromJSON Permission where
   parseJSON (Object o) = do 
     admin <- o .: "admin"

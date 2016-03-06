@@ -33,4 +33,4 @@ type GetTeam = "teams" :> Capture "id" TeamId :> Get '[JSON] Team
 type GetUser = "user" :> Get '[JSON] User
 
 -- | <https://developer.github.com/v3/repos/#list-your-repositories>
-type UserRepositories = "user" :> "repos" :> Get '[JSON] [Repository]
+type UserRepositories = "user" :> "repos" :> QueryParam "type" String :> Get '[JSON] [Repository]
