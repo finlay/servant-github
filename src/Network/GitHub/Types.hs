@@ -79,6 +79,7 @@ instance FromJSON Member where
 data Repository = Repository
     { repositoryName  :: RepositoryName
     , repositoryDescription :: Maybe Text
+    , repositoryDefaultBranch :: Maybe Text
     , repositoryPrivate :: Bool
     , repositoryPermissions :: Maybe Permission
     } deriving (Eq, Show)
@@ -102,7 +103,8 @@ instance FromJSON Permission where
 instance FromJSON Repository where
   parseJSON (Object o) =
    Repository <$> o .: "full_name"
-              <*> o .: "description"
+              <*> o .:? "description"
+              <*> o .:? "default_branch"
               <*> o .: "private"
               <*> o .:? "permissions"
   parseJSON _ = mzero
