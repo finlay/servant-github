@@ -31,6 +31,8 @@ module Network.GitHub
     , teamRepositories
     , user
     , userRepositories
+    , getCommit
+    , getContent
     -- * GitHub monad
     -- $github
     , GitHub
@@ -88,6 +90,14 @@ user = github (Proxy :: Proxy GetUser)
 -- | Get repositories for the authorised user
 userRepositories :: Maybe String -> GitHub [Repository]
 userRepositories = github (Proxy :: Proxy UserRepositories)
+
+-- | Get commit for repo and reference
+getCommit :: OrgLogin -> RepoName -> Sha -> GitHub Commit
+getCommit = github (Proxy :: Proxy GetCommit)
+
+-- | Get content for repo and reference and path
+getContent :: OrgLogin -> RepoName -> String -> Maybe String -> Maybe String -> GitHub Content
+getContent = github (Proxy :: Proxy GetContent)
 
 -- $github
 --

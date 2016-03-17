@@ -19,6 +19,10 @@ module Network.GitHub.Types
     , Repository(..)
     , RepositoryName
     , User(..)
+    , RepoName -- short version
+    , Sha
+    , Commit(..)
+    , Content(..)
     )
 where
 
@@ -135,4 +139,48 @@ instance ToJSON User where
            , "company" .= userCompany u
            , "email"   .= userEmail u
            ]
+
+-- | Commit
+type RepoName = Text
+type Sha = Text
+data Commit = Commit
+    { commitMessage     :: Text
+    , commitUrl         :: Text
+    } deriving (Eq, Show)
+
+-- TODO: fix this instance
+instance FromJSON Commit where
+  parseJSON (Object o) = do
+        html_url <- o .: "html_url"
+        commit   <- o .: "commit"
+        message <- commit .: "message"
+        return $ Commit message html_url
+  parseJSON _ = mzero
+
+instance ToJSON Commit where
+  toJSON c = 
+    let head_commit = object [ "message" .= commitMessage c
+                             , "url"     .= commitUrl c ]
+    in object [ "commits"     .= toJSON [ head_commit ]
+              , "head_commit" .= head_commit ]
+
+-- | Content
+data Content = Content
+    { contentType     :: Text
+    , contentEncoding :: Text
+    , contentSize     :: Int
+    , contentName     :: Text
+    , contentPath     :: Text
+    , contentContent  :: Text
+    } deriving (Eq, Show)
+
+instance FromJSON Content where
+    parseJSON (Object o) =
+        Content <$> o .: "type"
+                <*> o .: "encoding"
+                <*> o .: "size"
+                <*> o .: "name"
+                <*> o .: "path"
+                <*> o .: "content"
+    parseJSON _ = mzero
 

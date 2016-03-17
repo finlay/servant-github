@@ -159,11 +159,20 @@ instance HasGitHub (a -> b -> Single c) where
     embedGitHub comp arg = embedGitHub (comp arg)
 instance HasGitHub (a -> b -> c -> Single d) where
     embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> d -> Single e) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> d -> e -> Single f) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+
 instance HasGitHub (a -> Paginated b) where
     embedGitHub comp arg = embedGitHub (comp arg)
 instance HasGitHub (a -> b -> Paginated c) where
     embedGitHub comp arg = embedGitHub (comp arg)
 instance HasGitHub (a -> b -> c -> Paginated d) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> d -> Paginated e) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> d -> e -> Paginated f) where
     embedGitHub comp arg = embedGitHub (comp arg)
 
 -- | Wrapper around the servant 'client' function, that takes care of the 

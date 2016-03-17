@@ -34,3 +34,15 @@ type GetUser = "user" :> Get '[JSON] User
 
 -- | <https://developer.github.com/v3/repos/#list-your-repositories>
 type UserRepositories = "user" :> "repos" :> QueryParam "type" String :> Get '[JSON] [Repository]
+
+-- | <https://developer.github.com/v3/repos/commits/#get-a-single-commit>
+type GetCommit
+    = "repos" :> Capture "org" OrgLogin :> Capture "repo" RepoName 
+   :> "commits" :> Capture "sha" Sha :> Get '[JSON] Commit
+
+-- | <https://developer.github.com/v3/repos/contents/#get-contents>
+-- GET /repos/:owner/:repo/contents/:path
+type GetContent 
+    = "repos"  :> Capture "org" OrgLogin :> Capture "repo" RepoName 
+   :> "contents" :>  Capture "path" String :> QueryParam "ref" String :>  QueryParam "path" String
+   :> Get '[JSON] Content
