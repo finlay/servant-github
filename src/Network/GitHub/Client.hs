@@ -39,7 +39,7 @@ import Control.Monad (when)
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.State
-import Control.Monad.Trans.Either
+import Control.Monad.Trans.Except (ExceptT, runExceptT)
 import Data.Proxy
 import GHC.TypeLits
 import Data.String
@@ -48,6 +48,8 @@ import Data.Text as T
 import Servant.API
 import Servant.Client
 
+import Web.HttpApiData
+import Network.HTTP.Client (newManager, defaultManagerSettings, Manager)
 import Network.HTTP.Link.Types
 import Network.HTTP.Link.Parser (parseLinkHeaderBS)
 
@@ -56,19 +58,21 @@ import Network.HTTP.Link.Parser (parseLinkHeaderBS)
 newtype AuthToken = AuthToken Text deriving (Eq)
 instance IsString AuthToken where
     fromString s = AuthToken (fromString s)
-instance ToText AuthToken where
-    toText (AuthToken t) = T.concat ["token ",  t]
+instance ToHttpApiData AuthToken where
+    toQueryParam (AuthToken t) = T.concat ["token ",  t]
 
 host :: BaseUrl
-host = BaseUrl Https "api.github.com" 443
+host = BaseUrl Https "api.github.com" 443 "/"
 
 -- | The 'GitHub' monad provides execution context
-type GitHub = ReaderT (Maybe AuthToken) (StateT GitHubState (EitherT ServantError IO))
+type GitHub = ReaderT (Maybe AuthToken) (StateT GitHubState (ExceptT ServantError IO))
 
 -- | You need to provide a 'Maybe AuthToken' to lift a 'GitHub' computation
 -- into the 'IO' monad. 
 runGitHub :: GitHub a -> Maybe AuthToken -> IO (Either ServantError a)
-runGitHub comp token = runEitherT $ evalStateT (runReaderT comp token) defGitHubState
+runGitHub comp token = do
+    manager <- newManager defaultManagerSettings
+    runExceptT $ evalStateT (runReaderT comp token) (defGitHubState manager)
 
 -- | Closed type family that adds standard headers to the incoming 
 -- servant API type. The extra headers are put after any arguments types.
@@ -102,13 +106,14 @@ type family ReadHeaders a :: * where
     ReadHeaders otherwise = otherwise
 
 -- | Client function that returns a single result
-type Single a = Maybe Text -> Maybe AuthToken 
-            -> EitherT ServantError IO a
+type Single a = Maybe Text -> Maybe AuthToken -> Manager -> BaseUrl
+             -> ExceptT ServantError IO a
 
 -- | Client function that returns a list of results, and is therefore paginated
 type Paginated a = Maybe Text -> Maybe AuthToken 
                 -> Maybe Int -> Maybe Int
-                -> EitherT ServantError IO (Headers '[Header "Link" Text] [a])
+                -> Manager -> BaseUrl
+                -> ExceptT ServantError IO (Headers '[Header "Link" Text] [a])
 
 -- | Closed type family for recursively defining the GitHub client funciton types
 type family EmbedGitHub a :: * where
@@ -130,7 +135,8 @@ instance HasGitHub (Paginated a) where
              ua <- gets useragent
              p  <- gets page
              pp <- gets perPage
-             hres <- lift $ comp (Just ua) token (Just p) (Just pp)
+             m  <- gets manager
+             hres <- lift $ comp (Just ua) token (Just p) (Just pp) m host
              case getHeaders hres of
                  [("Link", lks)] -> modify $ \pg -> pg {links = (parseLinkHeaderBS lks)}
                  _ -> return ()
@@ -150,7 +156,8 @@ instance HasGitHub (Single a) where
         token <- ask
         lift $ do 
             ua <- gets useragent
-            lift $ comp (Just ua) token
+            m  <- gets manager
+            lift $ comp (Just ua) token m host
                     
 -- This instance is a bit too literal. Should be possible to do it reursively
 instance HasGitHub (a -> Single b) where
@@ -182,21 +189,22 @@ github :: (HasClient (AddHeaders api), HasGitHub (Client (AddHeaders api)))
 github px = embedGitHub (clientWithHeaders px)
 
 clientWithHeaders :: HasClient (AddHeaders api) => Proxy api -> Client (AddHeaders api)
-clientWithHeaders (Proxy :: Proxy api) = client (Proxy :: Proxy (AddHeaders api)) host 
+clientWithHeaders (Proxy :: Proxy api) = client (Proxy :: Proxy (AddHeaders api))
 
 
 -- | GitHubState options that control which headers are provided to the API
 -- and stores the 'Link' header result
 data GitHubState 
     = GitHubState 
-    { perPage    :: Int   -- ^ The number of records returned per page
+    { manager    :: Manager  -- ^ Network Manager
+    , perPage    :: Int   -- ^ The number of records returned per page
     , page       :: Int   -- ^ The page number returned
     , links      :: Maybe [Link] -- ^ Contains the returned 'Link' header, if available.
     , recurse    :: Bool  -- ^ Flag to set the recursive mode on
     , useragent  :: Text -- ^ Text to send as "User-agent"
-    } deriving Show
-defGitHubState :: GitHubState
-defGitHubState = GitHubState 100 1 Nothing True "servant-github"
+    }
+defGitHubState :: Manager -> GitHubState
+defGitHubState manager = GitHubState manager 100 1 Nothing True "servant-github"
 
 -- | Overide default value for User-agent header.
 -- Note, GitHub requires that a User-agent header be set.
