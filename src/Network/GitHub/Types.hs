@@ -14,6 +14,7 @@ module Network.GitHub.Types
     ( Organisation(..)
     , OrgLogin
     , Owner
+    , UserLogin(..)
     , Team(..)
     , TeamId
     , Member(..)
@@ -26,6 +27,8 @@ module Network.GitHub.Types
     , Commit(..)
     , Content(..)
     , Issue(..)
+    , Label(..)
+    , Milestone(..)
     )
 where
 
@@ -192,13 +195,57 @@ instance FromJSON Content where
                 <*> o .: "content"
     parseJSON _ = mzero
 
+newtype UserLogin = UserLogin Text deriving (Show, Eq)
+instance FromJSON UserLogin where
+    parseJSON (Object o) =
+        UserLogin <$> o .: "login"
+    parseJSON _ = mzero
+
+data Milestone = Milestone
+    { milestoneNumber        :: Int
+    , milestoneState         :: Text
+    , milestoneTitle         :: Text
+    , milestoneDescripiton   :: Text
+    , milestoneCreator       :: UserLogin
+    , milestoneOpenIssues    :: Int
+    , milestoneClosedIssues  :: Int
+    , milestoneCreated       :: UTCTime
+    , milestoneUpdated       :: Maybe UTCTime
+    , milestoneClosed        :: Maybe UTCTime
+    , milestoneDueOn         :: Maybe UTCTime
+    } deriving (Show, Eq)
+instance FromJSON Milestone where
+    parseJSON (Object o) =
+        Milestone <$> o .: "number"
+                  <*> o .: "state" 
+                  <*> o .: "title" 
+                  <*> o .: "description" 
+                  <*> o .: "creator" 
+                  <*> o .: "open_issues" 
+                  <*> o .: "closed_issues" 
+                  <*> o .: "created_at" 
+                  <*> o .: "updated_at" 
+                  <*> o .: "closed_at" 
+                  <*> o .: "due_on" 
+    parseJSON _ = mzero
+
+newtype Label = Label Text deriving (Eq, Show)
+instance FromJSON Label where
+    parseJSON (Object o) =
+        Label <$> o .: "name"
+    parseJSON _ = mzero
 
 -- | Issue
 data Issue = Issue
     { issueNumber     :: Int
+    , issueUrl        :: Text
     , issueState      :: Text
     , issueTitle      :: Text
     , issueBody       :: Text
+    , issueUser       :: UserLogin
+    , issueAssignee   :: Maybe UserLogin
+    , issueMilestone  :: Maybe Milestone
+    , issueLabels     :: [Label]
     , issueLocked     :: Bool
     , issueComments   :: Int
     , issueCreated    :: UTCTime
@@ -209,9 +256,14 @@ data Issue = Issue
 instance FromJSON Issue where
     parseJSON (Object o) =
         Issue   <$> o .: "number"
+                <*> o .: "html_url"
                 <*> o .: "state"
                 <*> o .: "title"
                 <*> o .: "body"
+                <*> o .: "user"
+                <*> o .:? "assignee"
+                <*> o .:? "milestone"
+                <*> o .: "labels"
                 <*> o .: "locked"
                 <*> o .: "comments"
                 <*> o .: "created_at"

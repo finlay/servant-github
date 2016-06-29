@@ -54,6 +54,7 @@ type GetIssues
    :> QueryParam "milestone" String :> QueryParam "state" String
    :> QueryParam "assignee" String :> QueryParam "creator" String
    :> QueryParam "mentioned" String :> QueryParam "labels" String
+   :> QueryParam "sort" String :> QueryParam "direction" String 
    :> QueryParam "since" String 
    :> Get '[JSON] [Issue]
  

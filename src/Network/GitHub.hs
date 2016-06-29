@@ -107,11 +107,13 @@ getIssues opts owner repo
   = github (Proxy :: Proxy GetIssues) owner repo 
             (lookup "milestone" opts)
             (lookup "state" opts)
-            (lookup "assignee" opts )
+            (lookup "assignee" opts)
             (lookup "creator" opts)
-            (lookup "mentioned" opts )
+            (lookup "mentioned" opts)
             (lookup "labels" opts)
-            (lookup "since" opts )
+            (lookup "sort" opts)
+            (lookup "direction" opts)
+            (lookup "since" opts)
 
 -- $github
 --
