@@ -205,7 +205,7 @@ data Milestone = Milestone
     { milestoneNumber        :: Int
     , milestoneState         :: Text
     , milestoneTitle         :: Text
-    , milestoneDescripiton   :: Text
+    , milestoneDescripiton   :: Maybe Text
     , milestoneCreator       :: UserLogin
     , milestoneOpenIssues    :: Int
     , milestoneClosedIssues  :: Int
@@ -219,7 +219,7 @@ instance FromJSON Milestone where
         Milestone <$> o .: "number"
                   <*> o .: "state" 
                   <*> o .: "title" 
-                  <*> o .: "description" 
+                  <*> o .:? "description" 
                   <*> o .: "creator" 
                   <*> o .: "open_issues" 
                   <*> o .: "closed_issues" 
