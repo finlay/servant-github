@@ -46,3 +46,14 @@ type GetContent
     = "repos"  :> Capture "org" OrgLogin :> Capture "repo" RepoName 
    :> "contents" :>  Capture "path" String :> QueryParam "ref" String :>  QueryParam "path" String
    :> Get '[JSON] Content
+
+-- | https://developer.github.com/v3/issues/#list-issues-for-a-repository
+-- GET /repos/:owner/:repo/issues
+type GetIssues
+    = "repos" :> Capture "owner" Owner :> Capture "repo" RepoName :> "issues"
+   :> QueryParam "milestone" String :> QueryParam "state" String
+   :> QueryParam "assignee" String :> QueryParam "creator" String
+   :> QueryParam "mentioned" String :> QueryParam "labels" String
+   :> QueryParam "since" String 
+   :> Get '[JSON] [Issue]
+ 

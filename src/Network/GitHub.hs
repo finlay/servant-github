@@ -33,6 +33,7 @@ module Network.GitHub
     , userRepositories
     , getCommit
     , getContent
+    , getIssues
     -- * GitHub monad
     -- $github
     , GitHub
@@ -98,6 +99,19 @@ getCommit = github (Proxy :: Proxy GetCommit)
 -- | Get content for repo and reference and path
 getContent :: OrgLogin -> RepoName -> String -> Maybe String -> Maybe String -> GitHub Content
 getContent = github (Proxy :: Proxy GetContent)
+
+-- | Get issuers for a repository
+type GHOptions =[(String, String)] 
+getIssues :: GHOptions -> Owner -> RepoName -> GitHub [Issue]
+getIssues opts owner repo 
+  = github (Proxy :: Proxy GetIssues) owner repo 
+            (lookup "milestone" opts)
+            (lookup "state" opts)
+            (lookup "assignee" opts )
+            (lookup "creator" opts)
+            (lookup "mentioned" opts )
+            (lookup "labels" opts)
+            (lookup "since" opts )
 
 -- $github
 --

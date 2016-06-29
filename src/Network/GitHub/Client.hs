@@ -49,7 +49,8 @@ import Servant.API
 import Servant.Client
 
 import Web.HttpApiData
-import Network.HTTP.Client (newManager, defaultManagerSettings, Manager)
+import Network.HTTP.Client.TLS (tlsManagerSettings)
+import Network.HTTP.Client (newManager, Manager)
 import Network.HTTP.Link.Types
 import Network.HTTP.Link.Parser (parseLinkHeaderBS)
 
@@ -62,7 +63,7 @@ instance ToHttpApiData AuthToken where
     toQueryParam (AuthToken t) = T.concat ["token ",  t]
 
 host :: BaseUrl
-host = BaseUrl Https "api.github.com" 443 "/"
+host = BaseUrl Https "api.github.com" 443 ""
 
 -- | The 'GitHub' monad provides execution context
 type GitHub = ReaderT (Maybe AuthToken) (StateT GitHubState (ExceptT ServantError IO))
@@ -71,7 +72,7 @@ type GitHub = ReaderT (Maybe AuthToken) (StateT GitHubState (ExceptT ServantErro
 -- into the 'IO' monad. 
 runGitHub :: GitHub a -> Maybe AuthToken -> IO (Either ServantError a)
 runGitHub comp token = do
-    manager <- newManager defaultManagerSettings
+    manager <- newManager tlsManagerSettings
     runExceptT $ evalStateT (runReaderT comp token) (defGitHubState manager)
 
 -- | Closed type family that adds standard headers to the incoming 
@@ -180,6 +181,18 @@ instance HasGitHub (a -> b -> c -> Paginated d) where
 instance HasGitHub (a -> b -> c -> d -> Paginated e) where
     embedGitHub comp arg = embedGitHub (comp arg)
 instance HasGitHub (a -> b -> c -> d -> e -> Paginated f) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> d -> e -> g -> Paginated f) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> d -> e -> g -> h -> Paginated f) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> d -> e -> g -> h -> i -> Paginated f) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> d -> e -> g -> h -> i -> k -> Paginated f) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> d -> e -> g -> h -> i -> k -> l -> Paginated f) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> d -> e -> g -> h -> i -> k -> l -> m -> Paginated f) where
     embedGitHub comp arg = embedGitHub (comp arg)
 
 -- | Wrapper around the servant 'client' function, that takes care of the 

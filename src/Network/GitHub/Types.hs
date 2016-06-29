@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 -- |
 -- Module      : Network.GitHub.Types
@@ -12,6 +13,7 @@
 module Network.GitHub.Types
     ( Organisation(..)
     , OrgLogin
+    , Owner
     , Team(..)
     , TeamId
     , Member(..)
@@ -23,12 +25,16 @@ module Network.GitHub.Types
     , Sha
     , Commit(..)
     , Content(..)
+    , Issue(..)
     )
 where
 
 import Control.Monad
+import GHC.Generics
+
 import Data.Aeson
 import Data.Text
+import Data.Time
 
 -- | Organisation 
 data Organisation = Organisation 
@@ -38,6 +44,8 @@ data Organisation = Organisation
     } deriving (Eq, Show)
 -- | Primary identifier for an organisation is the login
 type OrgLogin = Text
+
+type Owner = Text
 
 
 instance FromJSON Organisation where
@@ -182,5 +190,32 @@ instance FromJSON Content where
                 <*> o .: "name"
                 <*> o .: "path"
                 <*> o .: "content"
+    parseJSON _ = mzero
+
+
+-- | Issue
+data Issue = Issue
+    { issueNumber     :: Int
+    , issueState      :: Text
+    , issueTitle      :: Text
+    , issueBody       :: Text
+    , issueLocked     :: Bool
+    , issueComments   :: Int
+    , issueCreated    :: UTCTime
+    , issueUpdated    :: UTCTime
+    , issueClosed     :: Maybe UTCTime
+    } deriving (Generic, Eq, Show)
+
+instance FromJSON Issue where
+    parseJSON (Object o) =
+        Issue   <$> o .: "number"
+                <*> o .: "state"
+                <*> o .: "title"
+                <*> o .: "body"
+                <*> o .: "locked"
+                <*> o .: "comments"
+                <*> o .: "created_at"
+                <*> o .: "updated_at"
+                <*> o .: "closed_at"
     parseJSON _ = mzero
 
