@@ -17,6 +17,8 @@ module Network.GitHub.Client
     ( github
     , AuthToken
     , GitHub
+    , runGitHubClientM
+    , runGitHub'
     , runGitHub
     , GitHubState(..)
     , HasGitHub
@@ -68,12 +70,18 @@ host = BaseUrl Https "api.github.com" 443 ""
 -- | The 'GitHub' monad provides execution context
 type GitHub = ReaderT (Maybe AuthToken) (StateT GitHubState ClientM)
 
+runGitHubClientM :: ClientM a -> IO (Either ServantError a)
+runGitHubClientM comp = do
+    manager <- newManager tlsManagerSettings
+    runClientM comp (ClientEnv manager host)
+
+runGitHub' :: GitHub a -> Maybe AuthToken -> ClientM a
+runGitHub' comp token = evalStateT (runReaderT comp token) defGitHubState
+
 -- | You need to provide a 'Maybe AuthToken' to lift a 'GitHub' computation
 -- into the 'IO' monad.
 runGitHub :: GitHub a -> Maybe AuthToken -> IO (Either ServantError a)
-runGitHub comp token = do
-    manager <- newManager tlsManagerSettings
-    runClientM (evalStateT (runReaderT comp token) defGitHubState) (ClientEnv manager host)
+runGitHub comp token = runGitHubClientM $ runGitHub' comp token
 
 -- | Closed type family that adds standard headers to the incoming
 -- servant API type. The extra headers are put after any arguments types.

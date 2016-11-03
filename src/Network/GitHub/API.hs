@@ -6,7 +6,7 @@
 -- License     : BSD3
 -- Maintainer  : finlay.thompson@gmail.com
 -- Stability   : experimental
- 
+
 module Network.GitHub.API
 where
 
@@ -35,15 +35,24 @@ type GetUser = "user" :> Get '[JSON] User
 -- | <https://developer.github.com/v3/repos/#list-your-repositories>
 type UserRepositories = "user" :> "repos" :> QueryParam "type" String :> Get '[JSON] [Repository]
 
+-- | <https://developer.github.com/v3/repos/#list-organization-repositories>
+type OrganisationRepositories = "orgs" :> Capture "org" OrgLogin :> "repos" :> Get '[JSON] [Repository]
+
+-- | <https://developer.github.com/early-access/integrations/integrations-vs-oauth-applications/#repository-discovery>
+type InstallationRepositories = "installation" :> "repositories" :> Get '[EarlyAccessJSON] Repositories
+
+-- | <https://developer.github.com/v3/repos/collaborators/#list-collaborators>
+type RepositoryCollaborators = "repos" :> Capture "org" OrgLogin :> Capture "repo" RepoName :> "collaborators" :> Get '[JSON] [Member]
+
 -- | <https://developer.github.com/v3/repos/commits/#get-a-single-commit>
 type GetCommit
-    = "repos" :> Capture "org" OrgLogin :> Capture "repo" RepoName 
+    = "repos" :> Capture "org" OrgLogin :> Capture "repo" RepoName
    :> "commits" :> Capture "sha" Sha :> Get '[JSON] Commit
 
 -- | <https://developer.github.com/v3/repos/contents/#get-contents>
 -- GET /repos/:owner/:repo/contents/:path
-type GetContent 
-    = "repos"  :> Capture "org" OrgLogin :> Capture "repo" RepoName 
+type GetContent
+    = "repos"  :> Capture "org" OrgLogin :> Capture "repo" RepoName
    :> "contents" :>  Capture "path" String :> QueryParam "ref" String :>  QueryParam "path" String
    :> Get '[JSON] Content
 
@@ -54,7 +63,12 @@ type GetIssues
    :> QueryParam "milestone" String :> QueryParam "state" String
    :> QueryParam "assignee" String :> QueryParam "creator" String
    :> QueryParam "mentioned" String :> QueryParam "labels" String
-   :> QueryParam "sort" String :> QueryParam "direction" String 
-   :> QueryParam "since" String 
+   :> QueryParam "sort" String :> QueryParam "direction" String
+   :> QueryParam "since" String
    :> Get '[JSON] [Issue]
- 
+
+type ReqInstallationAccessToken = "installations" :> Capture "installation_id" Int :> "access_tokens"
+   :> Header "User-Agent" String
+   :> Header "Authorization" String
+   :> ReqBody '[JSON] (Maybe InstallationUser)
+   :> Post '[EarlyAccessJSON] InstallationAccessToken

@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
 -- |
 -- Module      : Network.GitHub
 -- Copyright   : (c) Finlay Thompson, 2015
@@ -31,12 +32,19 @@ module Network.GitHub
     , teamRepositories
     , user
     , userRepositories
+    , organisationRepositories
+    , installationRepositories
+    , repositoryCollaborators
     , getCommit
     , getContent
     , getIssues
+    , integrationJWT
+    , reqInstallationAccessToken
     -- * GitHub monad
     -- $github
     , GitHub
+    , runGitHubClientM
+    , runGitHub'
     , runGitHub
     , AuthToken
     , setUserAgent
@@ -52,7 +60,27 @@ module Network.GitHub
     )
 where
 
+import Control.Monad.IO.Class (MonadIO(..))
+
 import Data.Proxy
+import Data.Monoid ((<>))
+import Data.Time.Clock (getCurrentTime, UTCTime(..), addUTCTime)
+import Data.Time.Clock.POSIX
+       (utcTimeToPOSIXSeconds, posixSecondsToUTCTime)
+import Data.Text (Text)
+import qualified Data.Text as T (unpack, pack)
+import qualified Data.Text.Encoding as T (decodeUtf8')
+import qualified Data.ByteString.Lazy as B (toStrict)
+
+import Servant.Client (client, ClientM)
+
+import Crypto.Random (MonadRandom(..))
+import Crypto.JOSE.JWK (JWK(..))
+import Crypto.JWT (createJWSJWT, _claimIss, _claimIat, _claimExp)
+import qualified Crypto.JWT as JWT
+       (NumericDate(..), fromString, emptyClaimsSet)
+import Crypto.JOSE.JWS (Alg(..), newJWSHeader)
+import Crypto.JOSE.Compact (encodeCompact)
 
 import Network.GitHub.API
 import Network.GitHub.Types
@@ -92,6 +120,21 @@ user = github (Proxy :: Proxy GetUser)
 userRepositories :: Maybe String -> GitHub [Repository]
 userRepositories = github (Proxy :: Proxy UserRepositories)
 
+--
+-- | Get repositories for an organisation login
+organisationRepositories :: OrgLogin -> GitHub [Repository]
+organisationRepositories = github (Proxy :: Proxy OrganisationRepositories)
+
+--
+-- | Get repositories for the installation (current token should be an installation token)
+installationRepositories :: GitHub Repositories
+installationRepositories = github (Proxy :: Proxy InstallationRepositories)
+
+--
+-- | Get repositories for the installation (current token should be an installation token)
+repositoryCollaborators :: OrgLogin -> RepoName -> GitHub [Member]
+repositoryCollaborators = github (Proxy :: Proxy RepositoryCollaborators)
+
 -- | Get commit for repo and reference
 getCommit :: OrgLogin -> RepoName -> Sha -> GitHub Commit
 getCommit = github (Proxy :: Proxy GetCommit)
@@ -114,6 +157,33 @@ getIssues opts owner repo
             (lookup "sort" opts)
             (lookup "direction" opts)
             (lookup "since" opts)
+
+integrationJWT :: MonadRandom m => JWK -> Int -> UTCTime -> m Text
+integrationJWT key integrationId now' = do
+    let now = posixSecondsToUTCTime . fromInteger . round $ utcTimeToPOSIXSeconds now'
+        claimsSet = JWT.emptyClaimsSet
+          { _claimIss = Just $ JWT.fromString (T.pack $ show integrationId)
+          , _claimIat = Just $ JWT.NumericDate now
+          , _claimExp = Just $ JWT.NumericDate (addUTCTime 60 now)
+          }
+    createJWSJWT key (newJWSHeader RS256) claimsSet >>= \case
+        Left _err -> error "Unable to construct integration claims set"
+        Right jwt -> case encodeCompact jwt of
+            Left err -> error $ show err
+            Right jwtBS -> case T.decodeUtf8' $ B.toStrict jwtBS of
+                Left err -> error $ show err
+                Right jwtText -> return jwtText
+
+reqInstallationAccessToken :: JWK -> Int -> Int -> Maybe InstallationUser -> ClientM InstallationAccessToken
+reqInstallationAccessToken key integrationId installationId mbUser = do
+    now <- liftIO getCurrentTime
+    jwt <- liftIO $ integrationJWT key integrationId now
+    client (Proxy :: Proxy ReqInstallationAccessToken)
+           installationId
+           (Just "Gorbachev IO")
+           (Just $ "Bearer " <> T.unpack jwt)
+           mbUser
+
 
 -- $github
 --
