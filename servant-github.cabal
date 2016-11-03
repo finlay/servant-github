@@ -5,7 +5,7 @@ description:         This package provides a servant-client based client
                      for accessing the <https://developer.github.com/v3/ GitHub API v3>.
                      .
                      The github client is provided through the 'Network.GitHub.GitHub' monad,
-                     which provides support for managing the user-agent (a requirement 
+                     which provides support for managing the user-agent (a requirement
                      for github), an authentication token, and, pagination
                      support when the resulting value is a list.
                      .
@@ -13,7 +13,7 @@ description:         This package provides a servant-client based client
                      > import System.Environment
                      > import Data.String
                      > import Network.GitHub
-                     > 
+                     >
                      > main = do
                      >    token <- fmap fromString <$> lookupEnv "GITHUB_TOKEN"
                      >    result <- runGitHub userOrganisations token
@@ -39,10 +39,14 @@ library
                      , Network.GitHub.Types
   build-depends:       base >= 4.7 && < 5
                      , aeson
+                     , bytestring
+                     , cryptonite
                      , http-api-data
                      , http-client
                      , http-client-tls
                      , http-link-header
+                     , http-media
+                     , jose
                      , servant
                      , servant-client >= 0.9 && < 0.10
                      , text
@@ -58,7 +62,7 @@ executable test
                      , transformers
   hs-source-dirs:      app
   ghc-options: -Wall -fno-warn-name-shadowing -O3 -threaded
-  default-language:    Haskell2010 
+  default-language:    Haskell2010
 
 test-suite servant-github-test
   type:                exitcode-stdio-1.0

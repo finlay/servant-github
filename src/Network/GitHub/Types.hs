@@ -1,5 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 -- |
 -- Module      : Network.GitHub.Types
 -- Copyright   : (c) Finlay Thompson, 2015
@@ -9,7 +11,7 @@
 --
 -- Most of the types only parse part of the data availble in the return
 -- values from the GitHub API. These will be added to as required.
- 
+
 module Network.GitHub.Types
     ( Organisation(..)
     , OrgLogin
@@ -20,6 +22,8 @@ module Network.GitHub.Types
     , Member(..)
     , MemberId
     , Repository(..)
+    , Repositories(..)
+    , Permission(..)
     , RepositoryName
     , User(..)
     , RepoName -- short version
@@ -29,6 +33,9 @@ module Network.GitHub.Types
     , Issue(..)
     , Label(..)
     , Milestone(..)
+    , EarlyAccessJSON
+    , InstallationAccessToken(..)
+    , InstallationUser(..)
     )
 where
 
@@ -38,9 +45,15 @@ import GHC.Generics
 import Data.Aeson
 import Data.Text
 import Data.Time
+import Data.Proxy (Proxy(..))
+import qualified Data.List.NonEmpty as NE (NonEmpty(..))
 
--- | Organisation 
-data Organisation = Organisation 
+import qualified Network.HTTP.Media as M ((//))
+
+import Servant.API (JSON, Accept(..), MimeUnrender(..))
+
+-- | Organisation
+data Organisation = Organisation
     { orgLogin        :: OrgLogin
     , orgId           :: Int
     , orgDescription  :: Maybe Text
@@ -107,7 +120,7 @@ instance Show Permission where
     show Pull  = "pull"
     show Admin = "admin"
 instance FromJSON Permission where
-  parseJSON (Object o) = do 
+  parseJSON (Object o) = do
     admin <- o .: "admin"
     push  <- o .: "push"
     return $ if admin then Admin
@@ -124,7 +137,19 @@ instance FromJSON Repository where
               <*> o .:? "permissions"
   parseJSON _ = mzero
 
--- | Organisation 
+-- | Repositories
+data Repositories = Repositories
+    { repositoriesTotalCount :: Int
+    , repositories           :: [Repository]
+    }
+
+instance FromJSON Repositories where
+  parseJSON (Object o) =
+   Repositories <$> o .: "total_count"
+                <*> o .: "repositories"
+  parseJSON _ = mzero
+
+-- | Organisation
 data User = User
     { userLogin       :: Text
     , userId          :: Int
@@ -143,7 +168,7 @@ instance FromJSON User where
   parseJSON _ = mzero
 
 instance ToJSON User where
-  toJSON u = 
+  toJSON u =
     object [ "login"   .= userLogin u
            , "id"      .= userId u
            , "name"    .= userName u
@@ -169,7 +194,7 @@ instance FromJSON Commit where
   parseJSON _ = mzero
 
 instance ToJSON Commit where
-  toJSON c = 
+  toJSON c =
     let head_commit = object [ "message" .= commitMessage c
                              , "url"     .= commitUrl c ]
     in object [ "commits"     .= toJSON [ head_commit ]
@@ -217,16 +242,16 @@ data Milestone = Milestone
 instance FromJSON Milestone where
     parseJSON (Object o) =
         Milestone <$> o .: "number"
-                  <*> o .: "state" 
-                  <*> o .: "title" 
-                  <*> o .:? "description" 
-                  <*> o .: "creator" 
-                  <*> o .: "open_issues" 
-                  <*> o .: "closed_issues" 
-                  <*> o .: "created_at" 
-                  <*> o .: "updated_at" 
-                  <*> o .: "closed_at" 
-                  <*> o .: "due_on" 
+                  <*> o .: "state"
+                  <*> o .: "title"
+                  <*> o .:? "description"
+                  <*> o .: "creator"
+                  <*> o .: "open_issues"
+                  <*> o .: "closed_issues"
+                  <*> o .: "created_at"
+                  <*> o .: "updated_at"
+                  <*> o .: "closed_at"
+                  <*> o .: "due_on"
     parseJSON _ = mzero
 
 newtype Label = Label Text deriving (Eq, Show)
@@ -270,4 +295,25 @@ instance FromJSON Issue where
                 <*> o .: "updated_at"
                 <*> o .: "closed_at"
     parseJSON _ = mzero
+
+data EarlyAccessJSON
+
+instance FromJSON t => MimeUnrender EarlyAccessJSON t where
+    mimeUnrender _ = mimeUnrender (Proxy :: Proxy JSON)
+
+instance Accept EarlyAccessJSON where
+    contentTypes _ = "application" M.// "vnd.github.machine-man-preview+json" NE.:| ["application" M.// "json"]
+
+data InstallationAccessToken = InstallationAccessToken
+    { token :: Text
+    } deriving (Eq, Show, Generic)
+instance FromJSON InstallationAccessToken
+instance ToJSON InstallationAccessToken
+
+data InstallationUser = InstallationUser
+    { user_id :: Int
+    } deriving (Eq, Show, Generic)
+instance FromJSON InstallationUser
+instance ToJSON InstallationUser
+
 
