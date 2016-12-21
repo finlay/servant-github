@@ -12,6 +12,7 @@
  
 module Network.GitHub.Types
     ( Organisation(..)
+    , OrganisationMember(..)
     , OrgLogin
     , Owner
     , UserLogin(..)
@@ -88,6 +89,22 @@ instance FromJSON Member where
   parseJSON (Object o) =
    Member <$> o .: "id"
           <*> o .: "login"
+  parseJSON _ = mzero
+
+-- | OrganisationMember
+data OrganisationMember = OrganisationMember
+    { orgmemberRole         :: Text
+    , orgmemberState        :: Text
+    , orgmemberOrganisation :: Organisation
+    , orgmemberUser         :: Member
+    } deriving (Eq, Show)
+
+instance FromJSON OrganisationMember where
+  parseJSON (Object o) =
+   OrganisationMember <$> o .: "role"
+                      <*> o .: "state"
+                      <*> o .: "organization"
+                      <*> o .: "user"
   parseJSON _ = mzero
 
 -- | Repository

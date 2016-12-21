@@ -25,6 +25,7 @@ module Network.GitHub
     -- * GitHub API calls
     -- $client
       userOrganisations
+    , userOrganisationMemberships
     , organisationTeams
     , getTeam
     , teamMembers
@@ -67,6 +68,10 @@ import Network.GitHub.Client
 -- | Get list of 'Organisation' records for authorised user
 userOrganisations :: GitHub [Organisation]
 userOrganisations = github (Proxy :: Proxy UserOrganisations)
+
+-- | Get list of 'OrganisationMember' records for authorised user
+userOrganisationMemberships :: GitHub [OrganisationMember]
+userOrganisationMemberships = github (Proxy :: Proxy UserOrganisationMemberships)
 
 -- | Get list of 'Team' records, given the organisation login
 organisationTeams :: OrgLogin -> GitHub [Team]
