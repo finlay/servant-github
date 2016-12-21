@@ -17,6 +17,9 @@ import Network.GitHub.Types
 -- | <https://developer.github.com/v3/orgs/#list-your-organizations>
 type UserOrganisations = "user" :> "orgs" :> Get '[JSON] [Organisation]
 
+-- | <https://developer.github.com/v3/orgs/members/#list-your-organization-memberships>
+type UserOrganisationMemberships = "user" :> "memberships" :> "orgs" :> Get '[JSON] [OrganisationMember]
+
 -- | <https://developer.github.com/v3/orgs/teams/#list-teams>
 type OrganisationTeams = "orgs" :> Capture "org" OrgLogin :> "teams" :> Get '[JSON] [Team]
 
