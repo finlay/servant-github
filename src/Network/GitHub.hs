@@ -45,6 +45,7 @@ module Network.GitHub
     -- $github
     , GitHub
     , runGitHubClientM
+    , runGitHubNotApiClientM
     , runGitHub'
     , runGitHub
     , AuthToken
