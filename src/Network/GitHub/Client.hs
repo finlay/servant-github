@@ -18,6 +18,7 @@ module Network.GitHub.Client
     , AuthToken
     , GitHub
     , runGitHubClientM
+    , runGitHubNotApiClientM
     , runGitHub'
     , runGitHub
     , GitHubState(..)
@@ -67,6 +68,9 @@ instance ToHttpApiData AuthToken where
 host :: BaseUrl
 host = BaseUrl Https "api.github.com" 443 ""
 
+hostNotApi :: BaseUrl
+hostNotApi = BaseUrl Https "github.com" 443 ""
+
 -- | The 'GitHub' monad provides execution context
 type GitHub = ReaderT (Maybe AuthToken) (StateT GitHubState ClientM)
 
@@ -74,6 +78,13 @@ runGitHubClientM :: ClientM a -> IO (Either ServantError a)
 runGitHubClientM comp = do
     manager <- newManager tlsManagerSettings
     runClientM comp (ClientEnv manager host)
+
+-- | Most of the time we must use api.github.com, but calling
+-- login/oauth/access_token only works if sent to github.com.
+runGitHubNotApiClientM :: ClientM a -> IO (Either ServantError a)
+runGitHubNotApiClientM comp = do
+    manager <- newManager tlsManagerSettings
+    runClientM comp (ClientEnv manager hostNotApi)
 
 runGitHub' :: GitHub a -> Maybe AuthToken -> ClientM a
 runGitHub' comp token = evalStateT (runReaderT comp token) defGitHubState
