@@ -35,14 +35,26 @@ type GetTeam = "teams" :> Capture "id" TeamId :> Get '[JSON] Team
 -- | <https://developer.github.com/v3/users/#get-the-authenticated-user>
 type GetUser = "user" :> Get '[JSON] User
 
+-- | <https://developer.github.com/v3/users/#get-a-single-user>
+type GetUserByLogin = "user" :> QueryParam "username" String :> Get '[JSON] User
+
 -- | <https://developer.github.com/v3/repos/#list-your-repositories>
 type UserRepositories = "user" :> "repos" :> QueryParam "type" String :> Get '[JSON] [Repository]
+
+-- | <https://developer.github.com/v3/apps/installations/#list-repositories-accessible-to-the-user-for-an-installation>
+type UserInstallationRepositories = "user" :> "installations" :> Capture "installation_id" Int :> "repositories" :> Get '[EarlyAccessJSON] Repositories
 
 -- | <https://developer.github.com/v3/repos/#list-organization-repositories>
 type OrganisationRepositories = "orgs" :> Capture "org" OrgLogin :> "repos" :> Get '[JSON] [Repository]
 
 -- | <https://developer.github.com/early-access/integrations/integrations-vs-oauth-applications/#repository-discovery>
 type InstallationRepositories = "installation" :> "repositories" :> Get '[EarlyAccessJSON] Repositories
+
+-- | <https://developer.github.com/v3/apps/#find-installations>
+type AppInstallations = "app" :> "installations" :> Get '[EarlyAccessJSON] [Installation]
+
+-- | <https://developer.github.com/v3/apps/#list-installations-for-user>
+type UserInstallations = "user" :> "installations" :> QueryParam "access_token" String :> Get '[EarlyAccessJSON] Installations
 
 -- | <https://developer.github.com/v3/repos/collaborators/#list-collaborators>
 type RepositoryCollaborators = "repos" :> Capture "org" OrgLogin :> Capture "repo" RepoName :> "collaborators" :> Get '[JSON] [Member]

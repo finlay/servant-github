@@ -35,6 +35,8 @@ module Network.GitHub.Types
     , Label(..)
     , Milestone(..)
     , EarlyAccessJSON
+    , Installation(..)
+    , Installations(..)
     , InstallationAccessToken(..)
     , InstallationUser(..)
     )
@@ -320,6 +322,34 @@ instance FromJSON t => MimeUnrender EarlyAccessJSON t where
 
 instance Accept EarlyAccessJSON where
     contentTypes _ = "application" M.// "vnd.github.machine-man-preview+json" NE.:| ["application" M.// "json"]
+
+-- | Installation
+data Installation = Installation
+    { installationId :: Int
+    , installationAppId :: Int
+    , installationTargetId :: Int
+    , installationTargetType :: Text
+    } deriving (Eq, Show)
+
+instance FromJSON Installation where
+  parseJSON (Object o) =
+   Installation <$> o .: "id"
+                <*> o .: "app_id"
+                <*> o .: "target_id"
+                <*> o .: "target_type"
+  parseJSON _ = mzero
+
+-- | Installations
+data Installations = Installations
+    { installationsTotalCount :: Int
+    , installations           :: [Installation]
+    }
+
+instance FromJSON Installations where
+  parseJSON (Object o) =
+   Installations <$> o .: "total_count"
+                 <*> o .: "integration_installations"
+  parseJSON _ = mzero
 
 data InstallationAccessToken = InstallationAccessToken
     { token :: Text
