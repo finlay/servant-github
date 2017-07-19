@@ -32,9 +32,13 @@ module Network.GitHub
     , teamMembers
     , teamRepositories
     , user
+    , userByLogin
     , userRepositories
+    , userInstallationRepositories
     , organisationRepositories
     , installationRepositories
+    , appInstallations
+    , userInstallations
     , repositoryCollaborators
     , getCommit
     , getContent
@@ -121,22 +125,35 @@ teamRepositories = github (Proxy :: Proxy TeamRepositories)
 -- | Get the current user for the authorised user
 user :: GitHub User
 user = github (Proxy :: Proxy GetUser)
---
+
+-- | Lookup user by login
+userByLogin :: Maybe String -> GitHub User
+userByLogin = github (Proxy :: Proxy GetUserByLogin)
+
 -- | Get repositories for the authorised user
 userRepositories :: Maybe String -> GitHub [Repository]
 userRepositories = github (Proxy :: Proxy UserRepositories)
 
---
+-- | List repositories that are accessible to the authenticated user for an installation.
+userInstallationRepositories :: Int -> GitHub Repositories
+userInstallationRepositories = github (Proxy :: Proxy UserInstallationRepositories)
+
 -- | Get repositories for an organisation login
 organisationRepositories :: OrgLogin -> GitHub [Repository]
 organisationRepositories = github (Proxy :: Proxy OrganisationRepositories)
 
---
 -- | Get repositories for the installation (current token should be an installation token)
 installationRepositories :: GitHub Repositories
 installationRepositories = github (Proxy :: Proxy InstallationRepositories)
 
---
+-- | Get installations for the appliction
+appInstallations :: GitHub [Installation]
+appInstallations = github (Proxy :: Proxy AppInstallations)
+
+-- | List installations that are accessible to the authenticated user.
+userInstallations :: Maybe String -> GitHub Installations
+userInstallations = github (Proxy :: Proxy UserInstallations)
+
 -- | Get repositories for the installation (current token should be an installation token)
 repositoryCollaborators :: OrgLogin -> RepoName -> GitHub [Member]
 repositoryCollaborators = github (Proxy :: Proxy RepositoryCollaborators)
