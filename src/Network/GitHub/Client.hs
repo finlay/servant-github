@@ -48,7 +48,7 @@ import GHC.TypeLits
 import Data.String
 import Data.Text as T
 
-import Servant.API
+import Servant.API hiding (Link)
 import Servant.Client
 
 import Web.HttpApiData
