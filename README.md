@@ -14,7 +14,7 @@ secondly, to create a more extensible github client library.
 
 There are existing projects that provide a haskell client to the GH-API:
   * [github](http://hackage.haskell.org/package/github) is complete and
-    based on wreq and conduit,
+    based on http-client,
   * [octohat](http://hackage.haskell.org/package/octohat) only implements parts
     of the API, and is based on wreq,
   * [hgithub](http://hackage.haskell.org/package/hgithub) is very simple,
