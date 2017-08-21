@@ -47,6 +47,7 @@ import Data.Proxy
 import GHC.TypeLits
 import Data.String
 import Data.Text as T
+import Data.Maybe (fromMaybe)
 
 import Servant.API hiding (Link)
 import Servant.Client
@@ -56,6 +57,8 @@ import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Network.HTTP.Client (newManager, Manager)
 import Network.HTTP.Link.Types
 import Network.HTTP.Link.Parser (parseLinkHeaderBS)
+
+import Network.GitHub.Types (CountedList(..))
 
 -- | Token used to authorize access to the GitHub API.
 -- see <https://developer.github.com/v3/oauth/>
@@ -134,10 +137,17 @@ type Paginated a = Maybe Text -> Maybe AuthToken
                 -> Maybe Int -> Maybe Int
                 -> ClientM (Headers '[Header "Link" Text] [a])
 
+-- | Client function that returns a total count and list of results, and is therefore paginated
+type CountedPaginated name a = Maybe Text -> Maybe AuthToken
+                             -> Maybe Int -> Maybe Int
+                             -> ClientM (Headers '[Header "Link" Text] (CountedList name a))
+
+
 -- | Closed type family for recursively defining the GitHub client funciton types
 type family EmbedGitHub a :: * where
     EmbedGitHub (Single a)  = GitHub a
     EmbedGitHub (Paginated a) = GitHub [a]
+    EmbedGitHub (CountedPaginated name a) = GitHub (CountedList name a)
     EmbedGitHub (a -> b) = a -> EmbedGitHub b
 
 -- | This class defines how the client code is actually called.
@@ -156,7 +166,7 @@ instance HasGitHub (Paginated a) where
              pp <- gets perPage
              hres <- lift $ comp (Just ua) token (Just p) (Just pp)
              case getHeaders hres of
-                 [("Link", lks)] -> modify $ \pg -> pg {links = (parseLinkHeaderBS lks)}
+                 [("Link", lks)] -> modify $ \pg -> pg {links = parseLinkHeaderBS lks}
                  _ -> return ()
              let acc' = acc ++ getResponse hres
              rec <- gets recurse
@@ -167,6 +177,33 @@ instance HasGitHub (Paginated a) where
                      accumPages acc'
                  else return acc'
         lift $ accumPages []
+
+-- | Instance for the case where we have a total count and paginated results
+instance HasGitHub (CountedPaginated name a) where
+    embedGitHub comp = do
+        token <- ask
+        r <- lift $ gets recurse
+        when r resetPagination
+
+        let accumPages mbCount acc = do
+             ua <- gets useragent
+             p  <- gets page
+             pp <- gets perPage
+             hres <- lift $ comp (Just ua) token (Just p) (Just pp)
+             case getHeaders hres of
+                 [("Link", lks)] -> modify $ \pg -> pg {links = parseLinkHeaderBS lks}
+                 _ -> return ()
+             let response = getResponse hres
+                 count = fromMaybe (totalCount response) mbCount
+                 acc' = acc ++ items response
+             rec <- gets recurse
+             next <- gets hasNextLink
+             if rec && next
+                 then do
+                     modify $ \pg -> pg {page = p + 1}
+                     accumPages (Just count) acc'
+                 else return (CountedList count acc')
+        lift $ accumPages Nothing []
 
 -- | Instance for the case where we have single result
 instance HasGitHub (Single a) where
