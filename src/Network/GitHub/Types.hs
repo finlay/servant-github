@@ -2,6 +2,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 -- |
 -- Module      : Network.GitHub.Types
 -- Copyright   : (c) Finlay Thompson, 2015
@@ -13,7 +17,8 @@
 -- values from the GitHub API. These will be added to as required.
 
 module Network.GitHub.Types
-    ( Organisation(..)
+    ( CountedList(..)
+    , Organisation(..)
     , OrganisationMember(..)
     , OrgLogin
     , Owner
@@ -44,9 +49,11 @@ where
 
 import Control.Monad
 import GHC.Generics
+import GHC.TypeLits (KnownSymbol, symbolVal, Symbol)
 
 import Data.Aeson
 import Data.Text
+import qualified Data.Text as T (pack)
 import Data.Time
 import Data.Proxy (Proxy(..))
 import qualified Data.List.NonEmpty as NE (NonEmpty(..))
@@ -54,6 +61,18 @@ import qualified Data.List.NonEmpty as NE (NonEmpty(..))
 import qualified Network.HTTP.Media as M ((//))
 
 import Servant.API (JSON, Accept(..), MimeUnrender(..))
+
+-- | List of results including a total count
+data CountedList (name :: Symbol) a = CountedList
+    { totalCount :: Int
+    , items :: [a]
+    }
+
+instance (FromJSON a, KnownSymbol name) => FromJSON (CountedList name a) where
+  parseJSON (Object o) =
+    CountedList <$> o .: "total_count"
+                <*> o .: T.pack (symbolVal (Proxy :: Proxy name))
+  parseJSON _ = mzero
 
 -- | Organisation
 data Organisation = Organisation
@@ -157,16 +176,7 @@ instance FromJSON Repository where
   parseJSON _ = mzero
 
 -- | Repositories
-data Repositories = Repositories
-    { repositoriesTotalCount :: Int
-    , repositories           :: [Repository]
-    }
-
-instance FromJSON Repositories where
-  parseJSON (Object o) =
-   Repositories <$> o .: "total_count"
-                <*> o .: "repositories"
-  parseJSON _ = mzero
+type Repositories = CountedList "repositories" Repository
 
 -- | Organisation
 data User = User
@@ -339,17 +349,8 @@ instance FromJSON Installation where
                 <*> o .: "target_type"
   parseJSON _ = mzero
 
--- | Installations
-data Installations = Installations
-    { installationsTotalCount :: Int
-    , installations           :: [Installation]
-    }
-
-instance FromJSON Installations where
-  parseJSON (Object o) =
-   Installations <$> o .: "total_count"
-                 <*> o .: "integration_installations"
-  parseJSON _ = mzero
+-- | IntegrationInstallations
+type Installations = CountedList "integration_installations" Installation
 
 data InstallationAccessToken = InstallationAccessToken
     { token :: Text
