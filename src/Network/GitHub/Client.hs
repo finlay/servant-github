@@ -126,6 +126,21 @@ type family ReadHeaders a :: * where
     ReadHeaders (Patch cts [res])
         = QueryParam "page" Int :> QueryParam "per_page" Int
           :> Patch cts (Headers '[Header "Link" Text] [res])
+    ReadHeaders (Get cts (CountedList name res))
+        = QueryParam "page" Int :> QueryParam "per_page" Int
+          :> Get cts (Headers '[Header "Link" Text] (CountedList name res))
+    ReadHeaders (Post cts (CountedList name res))
+        = QueryParam "page" Int :> QueryParam "per_page" Int
+          :> Post cts (Headers '[Header "Link" Text] (CountedList name res))
+    ReadHeaders (Delete cts (CountedList name res))
+        = QueryParam "page" Int :> QueryParam "per_page" Int
+          :> Delete cts (Headers '[Header "Link" Text] (CountedList name res))
+    ReadHeaders (Put cts (CountedList name res))
+        = QueryParam "page" Int :> QueryParam "per_page" Int
+          :> Put cts (Headers '[Header "Link" Text] (CountedList name res))
+    ReadHeaders (Patch cts (CountedList name res))
+        = QueryParam "page" Int :> QueryParam "per_page" Int
+          :> Patch cts (Headers '[Header "Link" Text] (CountedList name res))
     ReadHeaders otherwise = otherwise
 
 -- | Client function that returns a single result
@@ -246,6 +261,29 @@ instance HasGitHub (a -> b -> c -> d -> e -> g -> h -> i -> k -> Paginated f) wh
 instance HasGitHub (a -> b -> c -> d -> e -> g -> h -> i -> k -> l -> Paginated f) where
     embedGitHub comp arg = embedGitHub (comp arg)
 instance HasGitHub (a -> b -> c -> d -> e -> g -> h -> i -> k -> l -> m -> Paginated f) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+
+instance HasGitHub (a -> CountedPaginated name b) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> CountedPaginated name c) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> CountedPaginated name d) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> d -> CountedPaginated name e) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> d -> e -> CountedPaginated name f) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> d -> e -> g -> CountedPaginated name f) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> d -> e -> g -> h -> CountedPaginated name f) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> d -> e -> g -> h -> i -> CountedPaginated name f) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> d -> e -> g -> h -> i -> k -> CountedPaginated name f) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> d -> e -> g -> h -> i -> k -> l -> CountedPaginated name f) where
+    embedGitHub comp arg = embedGitHub (comp arg)
+instance HasGitHub (a -> b -> c -> d -> e -> g -> h -> i -> k -> l -> m -> CountedPaginated name f) where
     embedGitHub comp arg = embedGitHub (comp arg)
 
 -- | Wrapper around the servant 'client' function, that takes care of the
