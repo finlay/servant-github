@@ -1,8 +1,8 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE LambdaCase #-}
 -- |
 -- Module      : Network.GitHub
 -- Copyright   : (c) Finlay Thompson, 2015
@@ -66,7 +66,9 @@ module Network.GitHub
     )
 where
 
+import Control.Lens
 import Control.Monad.IO.Class (MonadIO(..))
+import Control.Monad.Except
 
 import Data.Proxy
 import Data.Monoid ((<>))
@@ -74,17 +76,15 @@ import Data.Time.Clock (getCurrentTime, UTCTime(..), addUTCTime)
 import Data.Time.Clock.POSIX
        (utcTimeToPOSIXSeconds, posixSecondsToUTCTime)
 import Data.Text (Text)
-import qualified Data.Text as T (unpack, pack)
-import qualified Data.Text.Encoding as T (decodeUtf8')
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 import qualified Data.ByteString.Lazy as B (toStrict)
 
 import Servant.Client (client, ClientM)
 
 import Crypto.Random (MonadRandom(..))
-import Crypto.JOSE.JWK (JWK(..))
-import Crypto.JWT (createJWSJWT, _claimIss, _claimIat, _claimExp)
+import Crypto.JOSE.JWK (JWK)
 import qualified Crypto.JWT as JWT
-       (NumericDate(..), fromString, emptyClaimsSet)
 import Crypto.JOSE.JWS (Alg(..), newJWSHeader)
 import Crypto.JOSE.Compact (encodeCompact)
 
@@ -181,31 +181,34 @@ getIssues opts owner repo
             (lookup "direction" opts)
             (lookup "since" opts)
 
-integrationJWT :: MonadRandom m => JWK -> Int -> UTCTime -> m Text
+integrationJWT
+  :: (MonadRandom m, MonadError e m, JWT.AsError e)
+  => JWK
+  -> Int
+  -> UTCTime
+  -> m Text
 integrationJWT key integrationId now' = do
     let now = posixSecondsToUTCTime . fromInteger . round $ utcTimeToPOSIXSeconds now'
         claimsSet = JWT.emptyClaimsSet
-          { _claimIss = Just $ JWT.fromString (T.pack $ show integrationId)
-          , _claimIat = Just $ JWT.NumericDate now
-          , _claimExp = Just $ JWT.NumericDate (addUTCTime 60 now)
-          }
-    createJWSJWT key (newJWSHeader RS256) claimsSet >>= \case
-        Left _err -> error "Unable to construct integration claims set"
-        Right jwt -> case encodeCompact jwt of
-            Left err -> error $ show err
-            Right jwtBS -> case T.decodeUtf8' $ B.toStrict jwtBS of
-                Left err -> error $ show err
-                Right jwtText -> return jwtText
+          & JWT.claimIss .~ Just (review JWT.string $ show integrationId)
+          & JWT.claimIat .~ Just (JWT.NumericDate now)
+          & JWT.claimExp .~ Just (JWT.NumericDate $ addUTCTime 60 now)
+    signed <- JWT.signClaims key (newJWSHeader ((), RS256)) claimsSet
+    return . T.decodeUtf8 . B.toStrict $ encodeCompact signed
 
-reqInstallationAccessToken :: JWK -> Int -> Int -> Maybe InstallationUser -> ClientM InstallationAccessToken
+reqInstallationAccessToken
+  :: JWK -> Int -> Int -> Maybe InstallationUser -> ClientM InstallationAccessToken
 reqInstallationAccessToken key integrationId installationId mbUser = do
     now <- liftIO getCurrentTime
-    jwt <- liftIO $ integrationJWT key integrationId now
-    client (Proxy :: Proxy ReqInstallationAccessToken)
-           installationId
-           (Just "Gorbachev IO")
-           (Just $ "Bearer " <> T.unpack jwt)
-           mbUser
+    jwtEth <- liftIO . runExceptT $ integrationJWT key integrationId now
+    case jwtEth of
+      Left (err :: JWT.Error) -> liftIO . fail $ show err
+      Right jwt ->
+        client (Proxy :: Proxy ReqInstallationAccessToken)
+              installationId
+              (Just "Gorbachev IO")
+              (Just $ "Bearer " <> T.unpack jwt)
+              mbUser
 
 
 -- $github
