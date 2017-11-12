@@ -3,6 +3,7 @@
 module Network.GitHub.Types.Gist
   (
     GistId
+  , FileId
   , Gist(..)
   , GistOwner(..)
   , File(..)
@@ -15,19 +16,18 @@ import Data.Text (Text)
 import Data.Time.Clock
 import GHC.Generics
 
-import Network.GitHub.Types.Core
-
 --- Gist Types
 type GistId = Text
+type FileId = Text
 data Gist = Gist
   { url          :: Text
   , forks_url    :: Text
   , commits_url  :: Text
-  , id           :: Text
+  , id           :: GistId
   , description  :: Text
   , public       :: Bool
   , owner        :: GistOwner
-  , files        :: HashMap Text File
+  , files        :: HashMap FileId File
   , truncated    :: Bool
   , comments     :: Int
   , comments_url :: Text

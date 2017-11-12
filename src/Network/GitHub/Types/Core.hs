@@ -4,7 +4,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 -- |
 -- Module      : Network.GitHub.Types.Core
@@ -28,7 +27,7 @@ module Network.GitHub.Types.Core
     , Member(..)
     , MemberId
     , Repository(..)
-    , Repositories(..)
+    , Repositories
     , Permission(..)
     , RepositoryName
     , User(..)
@@ -41,7 +40,7 @@ module Network.GitHub.Types.Core
     , Milestone(..)
     , EarlyAccessJSON
     , Installation(..)
-    , Installations(..)
+    , Installations
     , InstallationAccessToken(..)
     , InstallationUser(..)
     )
@@ -352,13 +351,13 @@ instance FromJSON Installation where
 -- | IntegrationInstallations
 type Installations = CountedList "integration_installations" Installation
 
-data InstallationAccessToken = InstallationAccessToken
+newtype InstallationAccessToken = InstallationAccessToken
     { token :: Text
     } deriving (Eq, Show, Generic)
 instance FromJSON InstallationAccessToken
 instance ToJSON InstallationAccessToken
 
-data InstallationUser = InstallationUser
+newtype InstallationUser = InstallationUser
     { user_id :: Int
     } deriving (Eq, Show, Generic)
 instance FromJSON InstallationUser
