@@ -10,6 +10,8 @@
 module Network.GitHub.API
 where
 
+import Data.Time.Clock
+
 import Servant.API
 
 import Network.GitHub.Types
@@ -87,3 +89,9 @@ type ReqInstallationAccessToken = "installations" :> Capture "installation_id" I
    :> Header "Authorization" String
    :> ReqBody '[JSON] (Maybe InstallationUser)
    :> Post '[EarlyAccessJSON] InstallationAccessToken
+
+---- Gist
+-- | https://developer.github.com/v3/gists/#list-a-users-gists
+-- GET /gists
+-- UTCTime's ToHttpApiData instance uses ISO time repr, which is what required
+type Gists = "gists" :> QueryParam "since" UTCTime :> Get '[JSON] [Gist]

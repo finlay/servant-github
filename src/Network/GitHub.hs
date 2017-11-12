@@ -45,6 +45,7 @@ module Network.GitHub
     , getIssues
     , integrationJWT
     , reqInstallationAccessToken
+    , gists
     -- * GitHub monad
     -- $github
     , GitHub
@@ -210,6 +211,10 @@ reqInstallationAccessToken key integrationId installationId mbUser = do
               (Just $ "Bearer " <> T.unpack jwt)
               mbUser
 
+---- Gist
+-- | Get gists for the authorised user
+gists :: Maybe UTCTime -> GitHub [Gist]
+gists = github (Proxy :: Proxy Gists)
 
 -- $github
 --
