@@ -46,6 +46,7 @@ module Network.GitHub
     , integrationJWT
     , reqInstallationAccessToken
     , gists
+    , editGist
     -- * GitHub monad
     -- $github
     , GitHub
@@ -91,6 +92,7 @@ import Crypto.JOSE.Compact (encodeCompact)
 
 import Network.GitHub.API
 import Network.GitHub.Types
+import qualified Network.GitHub.Types.Gist.Edit as GE
 import Network.GitHub.Client
 
 -- $client
@@ -215,6 +217,10 @@ reqInstallationAccessToken key integrationId installationId mbUser = do
 -- | Get gists for the authorised user
 gists :: Maybe UTCTime -> GitHub [Gist]
 gists = github (Proxy :: Proxy Gists)
+
+-- | Edit a gist
+editGist :: GistId -> GE.GistEdit -> GitHub Gist
+editGist = github (Proxy :: Proxy EditGist)
 
 -- $github
 --

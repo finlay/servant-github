@@ -39,6 +39,7 @@ library
                      , Network.GitHub.Types
                      , Network.GitHub.Types.Core
                      , Network.GitHub.Types.Gist
+                     , Network.GitHub.Types.Gist.Edit
   build-depends:       base >= 4.7 && < 5
                      , aeson
                      , bytestring
