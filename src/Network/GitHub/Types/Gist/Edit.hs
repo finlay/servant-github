@@ -41,14 +41,6 @@ instance ToJSON GistEdit where
             | Just desc <- description = ["description" .= desc]
             | otherwise = []
 
--- | Create a GistEdit that edits a single file
-editFile :: G.FileId -> FileEdit -> GistEdit
-editFile f fe = mempty{ files = HM.singleton f (Just fe) }
-
--- | Create a GistEdit that deletes a single file
-deleteFile :: G.FileId -> GistEdit
-deleteFile f = mempty{ files = HM.singleton f Nothing }
-
 data FileEdit = FileEdit
   { filename :: Maybe T.Text
   , content  :: Maybe T.Text
@@ -68,3 +60,11 @@ instance ToJSON FileEdit where
   toJSON FileEdit{ filename, content } = object $
        (("filename" .=) <$> maybeToList filename)
     ++ (("content"  .=) <$> maybeToList content)
+
+-- | Create a GistEdit that edits a single file
+editFile :: G.FileId -> FileEdit -> GistEdit
+editFile f fe = mempty{ files = HM.singleton f (Just fe) }
+
+-- | Create a GistEdit that deletes a single file
+deleteFile :: G.FileId -> GistEdit
+deleteFile f = mempty{ files = HM.singleton f Nothing }

@@ -24,7 +24,7 @@ data Gist = Gist
   , forks_url    :: Text
   , commits_url  :: Text
   , id           :: GistId
-  , description  :: Text
+  , description  :: Maybe Text
   , public       :: Bool
   , owner        :: GistOwner
   , files        :: HashMap FileId File

@@ -47,6 +47,7 @@ module Network.GitHub
     , reqInstallationAccessToken
     , gists
     , editGist
+    , createGist
     -- * GitHub monad
     -- $github
     , GitHub
@@ -93,6 +94,7 @@ import Crypto.JOSE.Compact (encodeCompact)
 import Network.GitHub.API
 import Network.GitHub.Types
 import qualified Network.GitHub.Types.Gist.Edit as GE
+import qualified Network.GitHub.Types.Gist.Create as GC
 import Network.GitHub.Client
 
 -- $client
@@ -221,6 +223,10 @@ gists = github (Proxy :: Proxy Gists)
 -- | Edit a gist
 editGist :: GistId -> GE.GistEdit -> GitHub Gist
 editGist = github (Proxy :: Proxy EditGist)
+
+-- | Create a gist
+createGist :: GC.GistCreate -> GitHub Gist
+createGist = github (Proxy :: Proxy CreateGist)
 
 -- $github
 --
