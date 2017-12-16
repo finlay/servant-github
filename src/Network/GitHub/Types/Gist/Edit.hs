@@ -1,5 +1,5 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE NamedFieldPuns #-}
 -- | Types for editing a Gist
 module Network.GitHub.Types.Gist.Edit
   ( GistEdit(..)
@@ -14,27 +14,28 @@ import qualified Data.HashMap.Strict as HM
 import           Data.Maybe
 import           Data.Monoid
 import qualified Data.Text as T
-import qualified Network.GitHub.Types.Gist as G
+import qualified Network.GitHub.Types.Gist.Core as G
 
 data GistEdit = GistEdit
-  { description :: Maybe T.Text
-  , files :: HM.HashMap G.FileId (Maybe FileEdit)
+  { gistEditDescription :: Maybe T.Text
+  , gistEditFiles :: HM.HashMap G.FileId (Maybe FileEdit)
   } deriving (Show, Eq)
 
 instance Monoid GistEdit where
   mempty = GistEdit
-    { description = Nothing
-    , files = HM.empty
+    { gistEditDescription = Nothing
+    , gistEditFiles = HM.empty
     }
   ge1 `mappend` ge2 = GistEdit
-    { description = description ge1 <|> description ge2
+    { gistEditDescription = gistEditDescription ge1 <|> gistEditDescription ge2
     -- we use the overriding behavior of map, because we need to honour the
     -- presence of Nothing in a map - these mean deletions
-    , files = files ge1 <> files ge1
+    , gistEditFiles = gistEditFiles ge1 <> gistEditFiles ge1
     }
 
 instance ToJSON GistEdit where
-  toJSON GistEdit{ description, files } = object $ fileAttrs ++ descAttrs
+  toJSON GistEdit{ gistEditDescription=description, gistEditFiles=files }
+    = object $ fileAttrs ++ descAttrs
     where fileAttrs | HM.null files = []
                     | otherwise = [ "files" .= files ]
           descAttrs
@@ -42,29 +43,29 @@ instance ToJSON GistEdit where
             | otherwise = []
 
 data FileEdit = FileEdit
-  { filename :: Maybe T.Text
-  , content  :: Maybe T.Text
+  { fileEditFilename :: Maybe T.Text
+  , fileEditContent  :: Maybe T.Text
   } deriving (Show, Eq)
 
 instance Monoid FileEdit where
   mempty = FileEdit
-    { filename = Nothing
-    , content = Nothing
+    { fileEditFilename = Nothing
+    , fileEditContent = Nothing
     }
   fe1 `mappend` fe2 = FileEdit
-    { filename = filename fe1 <|> filename fe2
-    , content = content fe1 <|> content fe2
+    { fileEditFilename = fileEditFilename fe1 <|> fileEditFilename fe2
+    , fileEditContent = fileEditContent fe1 <|> fileEditContent fe2
     }
 
 instance ToJSON FileEdit where
-  toJSON FileEdit{ filename, content } = object $
-       (("filename" .=) <$> maybeToList filename)
-    ++ (("content"  .=) <$> maybeToList content)
+  toJSON FileEdit{..} = object $
+       (("filename" .=) <$> maybeToList fileEditFilename)
+    ++ (("content"  .=) <$> maybeToList fileEditContent)
 
 -- | Create a GistEdit that edits a single file
 editFile :: G.FileId -> FileEdit -> GistEdit
-editFile f fe = mempty{ files = HM.singleton f (Just fe) }
+editFile f fe = mempty{ gistEditFiles = HM.singleton f (Just fe) }
 
 -- | Create a GistEdit that deletes a single file
 deleteFile :: G.FileId -> GistEdit
-deleteFile f = mempty{ files = HM.singleton f Nothing }
+deleteFile f = mempty{ gistEditFiles = HM.singleton f Nothing }

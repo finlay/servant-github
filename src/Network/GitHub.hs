@@ -93,8 +93,6 @@ import Crypto.JOSE.Compact (encodeCompact)
 
 import Network.GitHub.API
 import Network.GitHub.Types
-import qualified Network.GitHub.Types.Gist.Edit as GE
-import qualified Network.GitHub.Types.Gist.Create as GC
 import Network.GitHub.Client
 
 -- $client
@@ -221,11 +219,11 @@ gists :: Maybe UTCTime -> GitHub [Gist]
 gists = github (Proxy :: Proxy Gists)
 
 -- | Edit a gist
-editGist :: GistId -> GE.GistEdit -> GitHub Gist
+editGist :: GistId -> GistEdit -> GitHub Gist
 editGist = github (Proxy :: Proxy EditGist)
 
 -- | Create a gist
-createGist :: GC.GistCreate -> GitHub Gist
+createGist :: GistCreate -> GitHub Gist
 createGist = github (Proxy :: Proxy CreateGist)
 
 -- $github

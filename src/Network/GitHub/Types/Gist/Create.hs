@@ -1,7 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE DeriveGeneric #-}
 module Network.GitHub.Types.Gist.Create
   ( GistCreate(..)
   , createFile
@@ -14,39 +13,39 @@ import qualified Data.HashMap.Strict as HM
 import           Data.Maybe
 import           Data.Monoid
 import qualified Data.Text as T
-import           GHC.Generics
-import qualified Network.GitHub.Types.Gist as G
+import qualified Network.GitHub.Types.Gist.Core as G
 
 data GistCreate = GistCreate
-  { description :: Maybe T.Text
-  , files :: HM.HashMap G.FileId FileCreate
-  , public :: Maybe Bool
+  { gistCreateDescription :: Maybe T.Text
+  , gistCreateFiles       :: HM.HashMap G.FileId FileCreate
+  , gistCreatePublic      :: Maybe Bool
   } deriving (Show, Eq)
 
 instance Monoid GistCreate where
   mempty = GistCreate
-    { description = Nothing
-    , files = HM.empty
-    , public = Nothing
+    { gistCreateDescription = Nothing
+    , gistCreateFiles       = HM.empty
+    , gistCreatePublic      = Nothing
     }
   gc1 `mappend` gc2 = GistCreate
-    { description = description gc1 <|> description gc2
-    , files = files gc1 <> files gc2
-    , public = public gc1 <|> public gc2
+    { gistCreateDescription = gistCreateDescription gc1 <|> gistCreateDescription gc2
+    , gistCreateFiles       = gistCreateFiles gc1 <> gistCreateFiles gc2
+    , gistCreatePublic      = gistCreatePublic gc1 <|> gistCreatePublic gc2
     }
 
 instance ToJSON GistCreate where
   toJSON GistCreate{..} = object $
-       (("description" .=) <$> maybeToList description)
-    ++ (("public" .=) <$> maybeToList public)
-    ++ [ "files" .= files ]
+       (("description" .=) <$> maybeToList gistCreateDescription)
+    ++ (("public" .=) <$> maybeToList gistCreatePublic)
+    ++ [ "files" .= gistCreateFiles ]
 
 newtype FileCreate = FileCreate
-  { content :: T.Text
-  } deriving (Show, Eq, Monoid, Generic)
+  { fileCreateContent :: T.Text
+  } deriving (Show, Eq, Monoid)
 
-instance ToJSON FileCreate
+instance ToJSON FileCreate where
+  toJSON FileCreate{..} = object [ "content" .= fileCreateContent ]
 
 -- | Construct a FileCreate that creates a single file
 createFile :: G.FileId -> FileCreate -> GistCreate
-createFile f c = mempty{ files = HM.singleton f c }
+createFile f c = mempty{ gistCreateFiles = HM.singleton f c }

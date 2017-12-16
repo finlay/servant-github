@@ -15,8 +15,6 @@ import Data.Time.Clock
 import Servant.API
 
 import Network.GitHub.Types
-import qualified Network.GitHub.Types.Gist.Edit as GE
-import qualified Network.GitHub.Types.Gist.Create as GC
 
 -- | <https://developer.github.com/v3/orgs/#list-your-organizations>
 type UserOrganisations = "user" :> "orgs" :> Get '[JSON] [Organisation]
@@ -98,6 +96,6 @@ type ReqInstallationAccessToken = "installations" :> Capture "installation_id" I
 -- UTCTime's ToHttpApiData instance uses ISO time repr, which is what required
 type Gists = "gists" :> QueryParam "since" UTCTime :> Get '[JSON] [Gist]
 
-type EditGist = "gists" :> Capture "id" GistId :> ReqBody '[JSON] GE.GistEdit :> Patch '[JSON] Gist
+type EditGist = "gists" :> Capture "id" GistId :> ReqBody '[JSON] GistEdit :> Patch '[JSON] Gist
 
-type CreateGist = "gists" :> ReqBody '[JSON] GC.GistCreate :> Post '[JSON] Gist
+type CreateGist = "gists" :> ReqBody '[JSON] GistCreate :> Post '[JSON] Gist
