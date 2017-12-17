@@ -37,6 +37,11 @@ library
                      , Network.GitHub.API
                      , Network.GitHub.Client
                      , Network.GitHub.Types
+                     , Network.GitHub.Types.Core
+                     , Network.GitHub.Types.Gist
+                     , Network.GitHub.Types.Gist.Core
+                     , Network.GitHub.Types.Gist.Edit
+                     , Network.GitHub.Types.Gist.Create
   build-depends:       base >= 4.7 && < 5
                      , aeson
                      , bytestring
@@ -54,6 +59,8 @@ library
                      , transformers
                      , lens
                      , mtl
+                     , unordered-containers
+                     , semigroups
   default-language:    Haskell2010
 
 executable test

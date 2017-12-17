@@ -42,7 +42,6 @@ import Control.Monad (when)
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.State
-import Control.Monad.Trans.Except (ExceptT, runExceptT)
 import Data.Proxy
 import GHC.TypeLits
 import Data.String
@@ -52,9 +51,8 @@ import Data.Maybe (fromMaybe)
 import Servant.API hiding (Link)
 import Servant.Client
 
-import Web.HttpApiData
 import Network.HTTP.Client.TLS (tlsManagerSettings)
-import Network.HTTP.Client (newManager, Manager)
+import Network.HTTP.Client (newManager)
 import Network.HTTP.Link.Types
 import Network.HTTP.Link.Parser (parseLinkHeaderBS)
 
