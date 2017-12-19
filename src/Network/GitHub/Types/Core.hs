@@ -349,7 +349,7 @@ instance FromJSON Installation where
   parseJSON _ = mzero
 
 -- | IntegrationInstallations
-type Installations = CountedList "integration_installations" Installation
+type Installations = CountedList "installations" Installation
 
 newtype InstallationAccessToken = InstallationAccessToken
     { token :: Text
