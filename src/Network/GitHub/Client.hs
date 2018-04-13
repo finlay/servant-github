@@ -78,14 +78,14 @@ type GitHub = ReaderT (Maybe AuthToken) (StateT GitHubState ClientM)
 runGitHubClientM :: ClientM a -> IO (Either ServantError a)
 runGitHubClientM comp = do
     manager <- newManager tlsManagerSettings
-    runClientM comp (ClientEnv manager host)
+    runClientM comp (mkClientEnv manager host)
 
 -- | Most of the time we must use api.github.com, but calling
 -- login/oauth/access_token only works if sent to github.com.
 runGitHubNotApiClientM :: ClientM a -> IO (Either ServantError a)
 runGitHubNotApiClientM comp = do
     manager <- newManager tlsManagerSettings
-    runClientM comp (ClientEnv manager hostNotApi)
+    runClientM comp (mkClientEnv manager hostNotApi)
 
 runGitHub' :: GitHub a -> Maybe AuthToken -> ClientM a
 runGitHub' comp token = evalStateT (runReaderT comp token) defGitHubState
@@ -286,11 +286,11 @@ instance HasGitHub (a -> b -> c -> d -> e -> g -> h -> i -> k -> l -> m -> Count
 
 -- | Wrapper around the servant 'client' function, that takes care of the
 -- extra headers that required for the 'GitHub' monad.
-github :: (HasClient (AddHeaders api), HasGitHub (Client (AddHeaders api)))
-       => Proxy api -> EmbedGitHub (Client (AddHeaders api))
+github :: (HasClient ClientM (AddHeaders api), HasGitHub (Client ClientM (AddHeaders api)))
+       => Proxy api -> EmbedGitHub (Client ClientM (AddHeaders api))
 github px = embedGitHub (clientWithHeaders px)
 
-clientWithHeaders :: HasClient (AddHeaders api) => Proxy api -> Client (AddHeaders api)
+clientWithHeaders :: (HasClient ClientM (AddHeaders api)) => Proxy api -> Client ClientM (AddHeaders api)
 clientWithHeaders (Proxy :: Proxy api) = client (Proxy :: Proxy (AddHeaders api))
 
 
