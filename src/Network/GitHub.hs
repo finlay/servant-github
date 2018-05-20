@@ -39,6 +39,7 @@ module Network.GitHub
     , installationRepositories
     , appInstallations
     , userInstallations
+    , userTeams
     , repositoryCollaborators
     , getCommit
     , getContent
@@ -156,6 +157,10 @@ appInstallations = github (Proxy :: Proxy AppInstallations)
 -- | List installations that are accessible to the authenticated user.
 userInstallations :: Maybe String -> GitHub Installations
 userInstallations = github (Proxy :: Proxy UserInstallations)
+
+-- | List teams that are the user is a member of.
+userTeams :: GitHub [Team]
+userTeams = github (Proxy :: Proxy UserTeams)
 
 -- | Get repositories for the installation (current token should be an installation token)
 repositoryCollaborators :: OrgLogin -> RepoName -> GitHub [Member]

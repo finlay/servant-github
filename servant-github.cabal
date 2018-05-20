@@ -53,7 +53,7 @@ library
                      , http-media
                      , jose
                      , servant
-                     , servant-client >= 0.13 && < 0.14
+                     , servant-client >= 0.9 && < 0.14
                      , text
                      , time
                      , transformers

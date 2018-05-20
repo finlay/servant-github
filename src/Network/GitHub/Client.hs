@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -74,6 +75,10 @@ hostNotApi = BaseUrl Https "github.com" 443 ""
 
 -- | The 'GitHub' monad provides execution context
 type GitHub = ReaderT (Maybe AuthToken) (StateT GitHubState ClientM)
+
+#if !MIN_VERSION_servant_client(0,13,0)
+mkClientEnv = ClientEnv
+#endif
 
 runGitHubClientM :: ClientM a -> IO (Either ServantError a)
 runGitHubClientM comp = do
@@ -286,11 +291,20 @@ instance HasGitHub (a -> b -> c -> d -> e -> g -> h -> i -> k -> l -> m -> Count
 
 -- | Wrapper around the servant 'client' function, that takes care of the
 -- extra headers that required for the 'GitHub' monad.
+#if MIN_VERSION_servant_client(0,13,0)
 github :: (HasClient ClientM (AddHeaders api), HasGitHub (Client ClientM (AddHeaders api)))
        => Proxy api -> EmbedGitHub (Client ClientM (AddHeaders api))
+#else
+github :: (HasClient (AddHeaders api), HasGitHub (Client (AddHeaders api)))
+       => Proxy api -> EmbedGitHub (Client (AddHeaders api))
+#endif
 github px = embedGitHub (clientWithHeaders px)
 
+#if MIN_VERSION_servant_client(0,13,0)
 clientWithHeaders :: (HasClient ClientM (AddHeaders api)) => Proxy api -> Client ClientM (AddHeaders api)
+#else
+clientWithHeaders :: (HasClient (AddHeaders api)) => Proxy api -> Client (AddHeaders api)
+#endif
 clientWithHeaders (Proxy :: Proxy api) = client (Proxy :: Proxy (AddHeaders api))
 
 
