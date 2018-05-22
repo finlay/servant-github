@@ -19,6 +19,7 @@ module Network.GitHub.Types.Core
     ( CountedList(..)
     , Organisation(..)
     , OrganisationMember(..)
+    , TeamMembership(..)
     , OrgLogin
     , Owner
     , UserLogin(..)
@@ -39,6 +40,7 @@ module Network.GitHub.Types.Core
     , Label(..)
     , Milestone(..)
     , EarlyAccessJSON
+    , HellcatJSON
     , Installation(..)
     , Installations
     , InstallationAccessToken(..)
@@ -138,6 +140,18 @@ instance FromJSON OrganisationMember where
                       <*> o .: "state"
                       <*> o .: "organization"
                       <*> o .: "user"
+  parseJSON _ = mzero
+
+-- | TeamMembership
+data TeamMembership = TeamMembership
+    { teamMembershipRole  :: Text
+    , teamMembershipState :: Text
+    } deriving (Eq, Show)
+
+instance FromJSON TeamMembership where
+  parseJSON (Object o) =
+   TeamMembership <$> o .: "role"
+                  <*> o .: "state"
   parseJSON _ = mzero
 
 -- | Repository
@@ -332,12 +346,21 @@ instance FromJSON t => MimeUnrender EarlyAccessJSON t where
 instance Accept EarlyAccessJSON where
     contentTypes _ = "application" M.// "vnd.github.machine-man-preview+json" NE.:| ["application" M.// "json"]
 
+data HellcatJSON
+
+instance FromJSON t => MimeUnrender HellcatJSON t where
+    mimeUnrender _ = mimeUnrender (Proxy :: Proxy JSON)
+
+instance Accept HellcatJSON where
+    contentTypes _ = "application" M.// "vnd.github.hellcat-preview+json" NE.:| ["application" M.// "json"]
+
 -- | Installation
 data Installation = Installation
     { installationId :: Int
     , installationAppId :: Int
     , installationTargetId :: Int
     , installationTargetType :: Text
+    , installationAccount :: Member
     } deriving (Eq, Show)
 
 instance FromJSON Installation where
@@ -346,6 +369,7 @@ instance FromJSON Installation where
                 <*> o .: "app_id"
                 <*> o .: "target_id"
                 <*> o .: "target_type"
+                <*> o .: "account"
   parseJSON _ = mzero
 
 -- | IntegrationInstallations

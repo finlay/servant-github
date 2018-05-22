@@ -29,6 +29,7 @@ module Network.GitHub
     , userOrganisationMemberships
     , organisationTeams
     , getTeam
+    , getTeamMembership
     , teamMembers
     , teamRepositories
     , user
@@ -39,6 +40,7 @@ module Network.GitHub
     , installationRepositories
     , appInstallations
     , userInstallations
+    , userTeams
     , repositoryCollaborators
     , getCommit
     , getContent
@@ -117,6 +119,10 @@ organisationTeams = github (Proxy :: Proxy OrganisationTeams)
 getTeam :: TeamId -> GitHub Team
 getTeam = github (Proxy :: Proxy GetTeam)
 
+-- | Get the team membership of a user
+getTeamMembership :: TeamId -> String -> GitHub TeamMembership
+getTeamMembership = github (Proxy :: Proxy GetTeamMembership)
+
 -- | Get list of 'Member' records assoctiated to 'Team' given by Team Id
 teamMembers :: TeamId -> GitHub [Member]
 teamMembers = github (Proxy :: Proxy TeamMembers)
@@ -156,6 +162,10 @@ appInstallations = github (Proxy :: Proxy AppInstallations)
 -- | List installations that are accessible to the authenticated user.
 userInstallations :: Maybe String -> GitHub Installations
 userInstallations = github (Proxy :: Proxy UserInstallations)
+
+-- | List teams that are the user is a member of.
+userTeams :: GitHub [Team]
+userTeams = github (Proxy :: Proxy UserTeams)
 
 -- | Get repositories for the installation (current token should be an installation token)
 repositoryCollaborators :: OrgLogin -> RepoName -> GitHub [Member]

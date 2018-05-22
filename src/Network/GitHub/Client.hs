@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -6,6 +7,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE LambdaCase #-}
 -- |
 -- Module      : Network.GitHub.Client
 -- Copyright   : (c) Finlay Thompson, 2015
@@ -45,8 +47,12 @@ import Control.Monad.Trans.State
 import Data.Proxy
 import GHC.TypeLits
 import Data.String
+import Text.Read (readMaybe)
+import Data.Text.Encoding (decodeUtf8')
 import Data.Text as T
 import Data.Maybe (fromMaybe)
+import Data.Foldable (forM_)
+import Data.ByteString (ByteString)
 
 import Servant.API hiding (Link)
 import Servant.Client
@@ -55,6 +61,7 @@ import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Network.HTTP.Client (newManager)
 import Network.HTTP.Link.Types
 import Network.HTTP.Link.Parser (parseLinkHeaderBS)
+import qualified Network.HTTP.Types.Header as HTTP (Header)
 
 import Network.GitHub.Types (CountedList(..))
 
@@ -74,6 +81,10 @@ hostNotApi = BaseUrl Https "github.com" 443 ""
 
 -- | The 'GitHub' monad provides execution context
 type GitHub = ReaderT (Maybe AuthToken) (StateT GitHubState ClientM)
+
+#if !MIN_VERSION_servant_client(0,13,0)
+mkClientEnv = ClientEnv
+#endif
 
 runGitHubClientM :: ClientM a -> IO (Either ServantError a)
 runGitHubClientM comp = do
@@ -106,54 +117,72 @@ type family AddHeaders a :: * where
         =  Header "User-Agent" Text
         :> Header "Authorization" AuthToken
         :> ReadHeaders last
+
+type HeadersToRead =
+    '[ Header "Link" Text
+     , Header "X-RateLimit-Limit" Int
+     , Header "X-RateLimit-Remaining" Int
+     , Header "X-RateLimit-Reset" Int
+     ]
+
 -- | Closed type family that adds headers necessary for pagination. In particular,
 -- it captures the "Link" header from the response.
 type family ReadHeaders a :: * where
     ReadHeaders (Get cts [res])
         = QueryParam "page" Int :> QueryParam "per_page" Int
-          :> Get cts (Headers '[Header "Link" Text] [res])
+          :> Get cts (Headers HeadersToRead [res])
     ReadHeaders (Post cts [res])
         = QueryParam "page" Int :> QueryParam "per_page" Int
-          :> Post cts (Headers '[Header "Link" Text] [res])
+          :> Post cts (Headers HeadersToRead [res])
     ReadHeaders (Delete cts [res])
         = QueryParam "page" Int :> QueryParam "per_page" Int
-          :> Delete cts (Headers '[Header "Link" Text] [res])
+          :> Delete cts (Headers HeadersToRead [res])
     ReadHeaders (Put cts [res])
         = QueryParam "page" Int :> QueryParam "per_page" Int
-          :> Put cts (Headers '[Header "Link" Text] [res])
+          :> Put cts (Headers HeadersToRead [res])
     ReadHeaders (Patch cts [res])
         = QueryParam "page" Int :> QueryParam "per_page" Int
-          :> Patch cts (Headers '[Header "Link" Text] [res])
+          :> Patch cts (Headers HeadersToRead [res])
     ReadHeaders (Get cts (CountedList name res))
         = QueryParam "page" Int :> QueryParam "per_page" Int
-          :> Get cts (Headers '[Header "Link" Text] (CountedList name res))
+          :> Get cts (Headers HeadersToRead (CountedList name res))
     ReadHeaders (Post cts (CountedList name res))
         = QueryParam "page" Int :> QueryParam "per_page" Int
-          :> Post cts (Headers '[Header "Link" Text] (CountedList name res))
+          :> Post cts (Headers HeadersToRead (CountedList name res))
     ReadHeaders (Delete cts (CountedList name res))
         = QueryParam "page" Int :> QueryParam "per_page" Int
-          :> Delete cts (Headers '[Header "Link" Text] (CountedList name res))
+          :> Delete cts (Headers HeadersToRead (CountedList name res))
     ReadHeaders (Put cts (CountedList name res))
         = QueryParam "page" Int :> QueryParam "per_page" Int
-          :> Put cts (Headers '[Header "Link" Text] (CountedList name res))
+          :> Put cts (Headers HeadersToRead (CountedList name res))
     ReadHeaders (Patch cts (CountedList name res))
         = QueryParam "page" Int :> QueryParam "per_page" Int
-          :> Patch cts (Headers '[Header "Link" Text] (CountedList name res))
+          :> Patch cts (Headers HeadersToRead (CountedList name res))
+    ReadHeaders (Get cts res)
+        = Get cts (Headers HeadersToRead res)
+    ReadHeaders (Post cts res)
+        = Post cts (Headers HeadersToRead res)
+    ReadHeaders (Delete cts res)
+        = Delete cts (Headers HeadersToRead res)
+    ReadHeaders (Put cts res)
+        = Put cts (Headers HeadersToRead res)
+    ReadHeaders (Patch cts res)
+        = Patch cts (Headers HeadersToRead res)
     ReadHeaders otherwise = otherwise
 
 -- | Client function that returns a single result
 type Single a = Maybe Text -> Maybe AuthToken
-             -> ClientM a
+             -> ClientM (Headers HeadersToRead a)
 
 -- | Client function that returns a list of results, and is therefore paginated
 type Paginated a = Maybe Text -> Maybe AuthToken
                 -> Maybe Int -> Maybe Int
-                -> ClientM (Headers '[Header "Link" Text] [a])
+                -> ClientM (Headers HeadersToRead [a])
 
 -- | Client function that returns a total count and list of results, and is therefore paginated
 type CountedPaginated name a = Maybe Text -> Maybe AuthToken
                              -> Maybe Int -> Maybe Int
-                             -> ClientM (Headers '[Header "Link" Text] (CountedList name a))
+                             -> ClientM (Headers HeadersToRead (CountedList name a))
 
 
 -- | Closed type family for recursively defining the GitHub client funciton types
@@ -162,6 +191,16 @@ type family EmbedGitHub a :: * where
     EmbedGitHub (Paginated a) = GitHub [a]
     EmbedGitHub (CountedPaginated name a) = GitHub (CountedList name a)
     EmbedGitHub (a -> b) = a -> EmbedGitHub b
+
+readMaybeBS :: Read a => ByteString -> Maybe a
+readMaybeBS bs = either (const Nothing) Just (decodeUtf8' bs) >>= readMaybe . T.unpack
+
+updateRateLimit :: HTTP.Header -> StateT GitHubState ClientM ()
+updateRateLimit = \case
+        ("X-RateLimit-Limit",     bs) -> forM_ (readMaybeBS bs) $ \i -> modify $ \pg -> pg {limit = i}
+        ("X-RateLimit-Remaining", bs) -> forM_ (readMaybeBS bs) $ \i -> modify $ \pg -> pg {remaining = i}
+        ("X-RateLimit-Reset",     bs) -> forM_ (readMaybeBS bs) $ \i -> modify $ \pg -> pg {reset = i}
+        _ -> return ()
 
 -- | This class defines how the client code is actually called.
 class HasGitHub a where
@@ -178,9 +217,9 @@ instance HasGitHub (Paginated a) where
              p  <- gets page
              pp <- gets perPage
              hres <- lift $ comp (Just ua) token (Just p) (Just pp)
-             case getHeaders hres of
-                 [("Link", lks)] -> modify $ \pg -> pg {links = parseLinkHeaderBS lks}
-                 _ -> return ()
+             forM_ (getHeaders hres) $ \case
+                 ("Link", lks) -> modify $ \pg -> pg {links = parseLinkHeaderBS lks}
+                 header -> updateRateLimit header
              let acc' = acc ++ getResponse hres
              rec <- gets recurse
              next <- gets hasNextLink
@@ -203,9 +242,9 @@ instance HasGitHub (CountedPaginated name a) where
              p  <- gets page
              pp <- gets perPage
              hres <- lift $ comp (Just ua) token (Just p) (Just pp)
-             case getHeaders hres of
-                 [("Link", lks)] -> modify $ \pg -> pg {links = parseLinkHeaderBS lks}
-                 _ -> return ()
+             forM_ (getHeaders hres) $ \case
+                 ("Link", lks) -> modify $ \pg -> pg {links = parseLinkHeaderBS lks}
+                 header -> updateRateLimit header
              let response = getResponse hres
                  count = fromMaybe (totalCount response) mbCount
                  acc' = acc ++ items response
@@ -224,7 +263,10 @@ instance HasGitHub (Single a) where
         token <- ask
         lift $ do
             ua <- gets useragent
-            lift $ comp (Just ua) token
+            hres <- lift $ comp (Just ua) token
+            forM_ (getHeaders hres) $ \case
+                header -> updateRateLimit header
+            return $ getResponse hres
 
 -- This instance is a bit too literal. Should be possible to do it reursively
 instance HasGitHub (a -> Single b) where
@@ -286,11 +328,20 @@ instance HasGitHub (a -> b -> c -> d -> e -> g -> h -> i -> k -> l -> m -> Count
 
 -- | Wrapper around the servant 'client' function, that takes care of the
 -- extra headers that required for the 'GitHub' monad.
+#if MIN_VERSION_servant_client(0,13,0)
 github :: (HasClient ClientM (AddHeaders api), HasGitHub (Client ClientM (AddHeaders api)))
        => Proxy api -> EmbedGitHub (Client ClientM (AddHeaders api))
+#else
+github :: (HasClient (AddHeaders api), HasGitHub (Client (AddHeaders api)))
+       => Proxy api -> EmbedGitHub (Client (AddHeaders api))
+#endif
 github px = embedGitHub (clientWithHeaders px)
 
+#if MIN_VERSION_servant_client(0,13,0)
 clientWithHeaders :: (HasClient ClientM (AddHeaders api)) => Proxy api -> Client ClientM (AddHeaders api)
+#else
+clientWithHeaders :: (HasClient (AddHeaders api)) => Proxy api -> Client (AddHeaders api)
+#endif
 clientWithHeaders (Proxy :: Proxy api) = client (Proxy :: Proxy (AddHeaders api))
 
 
@@ -303,9 +354,12 @@ data GitHubState
     , links      :: Maybe [Link] -- ^ Contains the returned 'Link' header, if available.
     , recurse    :: Bool  -- ^ Flag to set the recursive mode on
     , useragent  :: Text -- ^ Text to send as "User-agent"
+    , limit      :: Int -- ^ The maximum number of requests you're permitted to make per hour
+    , remaining  :: Int -- ^ The number of requests remaining in the current rate limit window.
+    , reset      :: Int -- ^ The time at which the current rate limit window resets in UTC epoch seconds.
     }
 defGitHubState :: GitHubState
-defGitHubState = GitHubState 100 1 Nothing True "servant-github"
+defGitHubState = GitHubState 100 1 Nothing True "servant-github" 0 0 0
 
 -- | Overide default value for User-agent header.
 -- Note, GitHub requires that a User-agent header be set.
