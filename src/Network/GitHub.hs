@@ -29,6 +29,7 @@ module Network.GitHub
     , userOrganisationMemberships
     , organisationTeams
     , getTeam
+    , getTeamMembership
     , teamMembers
     , teamRepositories
     , user
@@ -117,6 +118,10 @@ organisationTeams = github (Proxy :: Proxy OrganisationTeams)
 -- | Get the 'Team' record associated to a TeamId
 getTeam :: TeamId -> GitHub Team
 getTeam = github (Proxy :: Proxy GetTeam)
+
+-- | Get the team membership of a user
+getTeamMembership :: TeamId -> String -> GitHub TeamMembership
+getTeamMembership = github (Proxy :: Proxy GetTeamMembership)
 
 -- | Get list of 'Member' records assoctiated to 'Team' given by Team Id
 teamMembers :: TeamId -> GitHub [Member]

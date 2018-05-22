@@ -35,7 +35,7 @@ type TeamRepositories = "teams" :> Capture "id" TeamId :> "repos" :> Get '[JSON]
 type GetTeam = "teams" :> Capture "id" TeamId :> Get '[JSON] Team
 
 -- | <https://developer.github.com/v3/teams/members/#get-team-membership>
-type GetTeamMembership = "teams" :> Capture "id" TeamId :> "memberships" :> QueryParam "username" String :> Get '[JSON] TeamMembership
+type GetTeamMembership = "teams" :> Capture "id" TeamId :> "memberships" :> Capture "username" String :> Get '[JSON] TeamMembership
 
 -- | <https://developer.github.com/v3/users/#get-the-authenticated-user>
 type GetUser = "user" :> Get '[JSON] User
