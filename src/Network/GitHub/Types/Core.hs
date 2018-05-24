@@ -98,6 +98,7 @@ instance FromJSON Organisation where
 data Team = Team
     { teamId          :: TeamId
     , teamName        :: Text
+    , teamSlug        :: Text
     , teamDescription :: Maybe Text
     , teamPermission  :: Maybe Text
     } deriving (Eq, Show)
@@ -108,6 +109,7 @@ instance FromJSON Team where
   parseJSON (Object o) =
    Team <$> o .: "id"
         <*> o .: "name"
+        <*> o .: "slug"
         <*> o .: "description"
         <*> o .: "permission"
   parseJSON _ = mzero
