@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
 -- | Types for editing a Gist
@@ -13,6 +14,7 @@ import           Data.Aeson
 import qualified Data.HashMap.Strict as HM
 import           Data.Maybe
 import           Data.Monoid
+import           Data.Semigroup as Sem
 import qualified Data.Text as T
 import qualified Network.GitHub.Types.Gist.Core as G
 
@@ -21,17 +23,23 @@ data GistEdit = GistEdit
   , gistEditFiles :: HM.HashMap G.FileId (Maybe FileEdit)
   } deriving (Show, Eq)
 
-instance Monoid GistEdit where
-  mempty = GistEdit
-    { gistEditDescription = Nothing
-    , gistEditFiles = HM.empty
-    }
-  ge1 `mappend` ge2 = GistEdit
+
+instance Sem.Semigroup GistEdit where
+  ge1 <> ge2 = GistEdit
     { gistEditDescription = gistEditDescription ge1 <|> gistEditDescription ge2
     -- we use the overriding behavior of map, because we need to honour the
     -- presence of Nothing in a map - these mean deletions
     , gistEditFiles = gistEditFiles ge1 <> gistEditFiles ge1
     }
+
+instance Monoid GistEdit where
+  mempty = GistEdit
+    { gistEditDescription = Nothing
+    , gistEditFiles = HM.empty
+    }
+#if !(MIN_VERSION_base(4,11,0))
+  mappend = (<>)
+#endif
 
 instance ToJSON GistEdit where
   toJSON GistEdit{ gistEditDescription=description, gistEditFiles=files }
@@ -47,15 +55,20 @@ data FileEdit = FileEdit
   , fileEditContent  :: Maybe T.Text
   } deriving (Show, Eq)
 
+instance Sem.Semigroup FileEdit where
+  fe1 <> fe2 = FileEdit
+    { fileEditFilename = fileEditFilename fe1 <|> fileEditFilename fe2
+    , fileEditContent = fileEditContent fe1 <|> fileEditContent fe2
+    }
+
 instance Monoid FileEdit where
   mempty = FileEdit
     { fileEditFilename = Nothing
     , fileEditContent = Nothing
     }
-  fe1 `mappend` fe2 = FileEdit
-    { fileEditFilename = fileEditFilename fe1 <|> fileEditFilename fe2
-    , fileEditContent = fileEditContent fe1 <|> fileEditContent fe2
-    }
+#if !(MIN_VERSION_base(4,11,0))
+  mappend = (<>)
+#endif
 
 instance ToJSON FileEdit where
   toJSON FileEdit{..} = object $
