@@ -54,7 +54,7 @@ library
                      , http-types
                      , jose
                      , servant
-                     , servant-client >= 0.9 && < 0.14
+                     , servant-client >= 0.9 && < 0.15
                      , text
                      , time
                      , transformers
