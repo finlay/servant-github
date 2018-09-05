@@ -33,6 +33,7 @@ module Network.GitHub
     , teamMembers
     , teamRepositories
     , user
+    , userEmails
     , userByLogin
     , userRepositories
     , userInstallationRepositories
@@ -134,6 +135,10 @@ teamRepositories = github (Proxy :: Proxy TeamRepositories)
 -- | Get the current user for the authorised user
 user :: GitHub User
 user = github (Proxy :: Proxy GetUser)
+
+-- | Get the current user emails
+userEmails :: GitHub [Email]
+userEmails = github (Proxy :: Proxy GetUserEmails)
 
 -- | Lookup user by login
 userByLogin :: Maybe String -> GitHub User
