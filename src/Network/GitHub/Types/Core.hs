@@ -32,6 +32,7 @@ module Network.GitHub.Types.Core
     , Permission(..)
     , RepositoryName
     , User(..)
+    , Email(..)
     , RepoName -- short version
     , Sha
     , Commit(..)
@@ -219,6 +220,21 @@ instance ToJSON User where
            , "company" .= userCompany u
            , "email"   .= userEmail u
            ]
+
+data Email = Email
+   { emailEmail      :: Text
+   , emailVerified   :: Bool
+   , emailPrimary    :: Bool
+   , emailVisibility :: Maybe Text
+   } deriving (Eq, Show)
+
+instance FromJSON Email where
+ parseJSON (Object o) =
+  Email <$> o .: "email"
+        <*> o .: "verified"
+        <*> o .: "primary"
+        <*> o .: "visibility"
+ parseJSON _ = mzero
 
 -- | Commit
 type RepoName = Text

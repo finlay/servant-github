@@ -43,6 +43,9 @@ type GetUser = "user" :> Get '[JSON] User
 -- | <https://developer.github.com/v3/users/#get-a-single-user>
 type GetUserByLogin = "user" :> QueryParam "username" String :> Get '[JSON] User
 
+-- | <https://developer.github.com/v3/users/emails/#list-email-addresses-for-a-user>
+type GetUserEmails = "user" :> "emails" :> Get '[JSON] [Email]
+
 -- | <https://developer.github.com/v3/repos/#list-your-repositories>
 type UserRepositories = "user" :> "repos" :> QueryParam "type" String :> Get '[JSON] [Repository]
 
