@@ -55,6 +55,7 @@ library
                      , jose
                      , servant
                      , servant-client >= 0.9 && < 0.15
+                     , swagger2
                      , text
                      , time
                      , transformers

@@ -53,7 +53,7 @@ import GHC.Generics
 import GHC.TypeLits (KnownSymbol, symbolVal, Symbol)
 
 import Data.Aeson
-import Data.Text
+import Data.Text (Text)
 import qualified Data.Text as T (pack)
 import Data.Time
 import Data.Proxy (Proxy(..))
@@ -62,6 +62,10 @@ import qualified Data.List.NonEmpty as NE (NonEmpty(..))
 import qualified Network.HTTP.Media as M ((//))
 
 import Servant.API (JSON, Accept(..), MimeUnrender(..))
+import Data.Swagger
+       (defaultSchemaOptions, ToSchema(..), genericDeclareNamedSchema)
+import qualified Data.Swagger as S (fieldLabelModifier)
+import Data.Char (toLower)
 
 -- | List of results including a total count
 data CountedList (name :: Symbol) a = CountedList
@@ -200,7 +204,11 @@ data User = User
     , userName        :: Maybe Text
     , userCompany     :: Maybe Text
     , userEmail       :: Maybe Text
-    } deriving (Eq, Show)
+    } deriving (Eq, Show, Generic)
+
+instance ToSchema User where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+                { S.fieldLabelModifier = map toLower . drop 4 }
 
 instance FromJSON User where
   parseJSON (Object o) =
