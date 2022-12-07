@@ -248,22 +248,25 @@ instance FromJSON Email where
 type RepoName = Text
 type Sha = Text
 data Commit = Commit
-    { commitMessage     :: Text
+    { commitSha         :: Text
+    , commitMessage     :: Text
     , commitUrl         :: Text
     } deriving (Eq, Show)
 
 -- TODO: fix this instance
 instance FromJSON Commit where
   parseJSON (Object o) = do
+        sha      <- o .: "sha"
         html_url <- o .: "html_url"
         commit   <- o .: "commit"
         message <- commit .: "message"
-        return $ Commit message html_url
+        return $ Commit sha message html_url
   parseJSON _ = mzero
 
 instance ToJSON Commit where
   toJSON c =
-    let head_commit = object [ "message" .= commitMessage c
+    let head_commit = object [ "sha"     .= commitSha c
+                             , "message" .= commitMessage c
                              , "url"     .= commitUrl c ]
     in object [ "commits"     .= toJSON [ head_commit ]
               , "head_commit" .= head_commit ]
