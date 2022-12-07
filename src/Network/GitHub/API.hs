@@ -93,7 +93,7 @@ type GetIssues
    :> QueryParam "since" String
    :> Get '[JSON] [Issue]
 
-type ReqInstallationAccessToken = "installations" :> Capture "installation_id" Int :> "access_tokens"
+type ReqInstallationAccessToken = "app" :> "installations" :> Capture "installation_id" Int :> "access_tokens"
    :> Header "User-Agent" String
    :> Header "Authorization" String
    :> ReqBody '[JSON] (Maybe InstallationUser)
